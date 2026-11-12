@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>포켓몬 도감 | K-Pokédex</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Pretendard / Noto Sans KR & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', '"Inter"', 'sans-serif'],
+                        mono: ['"Inter"', 'monospace']
+                    },
+                    colors: {
+                        pokeRed: '#EF5350',
+                        pokeDark: '#1E293B',
+                        pokeBg: '#F8FAFC'
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'spin-slow': 'spin 12s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 커스텀 스크롤바 및 미세 스타일 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* 몬스터볼 배경 패턴 */
+        .pokeball-watermark {
+            background-image: radial-gradient(circle at center, transparent 18%, rgba(255,255,255,0.45) 19%, rgba(255,255,255,0.45) 26%, transparent 27%),
+                              linear-gradient(to bottom, transparent 46%, rgba(255,255,255,0.45) 46%, rgba(255,255,255,0.45) 54%, transparent 54%);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-red-500 selection:text-white min-h-screen flex flex-col">
+
+    <!-- 상단 헤더 (몬스터볼 테마) -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+        <!-- 상단 레드 포인트 바 -->
+        <div class="h-1.5 w-full bg-gradient-to-r from-red-600 via-rose-500 to-red-600"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <!-- 로고 & 타이틀 -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="resetFilters()">
+                        <!-- SVG 몬스터볼 아이콘 -->
+                        <div class="relative w-10 h-10 flex items-center justify-center rounded-full shadow-md bg-white overflow-hidden border-2 border-slate-800 group">
+                            <div class="absolute top-0 w-full h-1/2 bg-red-500 border-b-2 border-slate-800 transition-transform group-hover:-translate-y-0.5"></div>
+                            <div class="relative z-10 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-800 flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+                                포켓몬 도감
+                                <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600">Pokédex</span>
+                            </h1>
+                            <p class="text-xs text-slate-500 hidden sm:block">1세대~9세대 주요 포켓몬 데이터 & 상세 스탯 가이드</p>
+                        </div>
+                    </div>
+
+                    <!-- 모바일 카운터 배지 -->
+                    <div class="md:hidden text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full">
+                        총 <span id="mobileCount" class="text-red-600">207</span>종
+                    </div>
+                </div>
+
+                <!-- 실시간 검색바 -->
+                <div class="relative flex-1 max-w-md w-full">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="이름, 도감 번호, 메가진화/메가스톤 (예: 피카츄, 메가리자몽, 나이트)" 
+                        class="block w-full pl-10 pr-10 py-2.5 bg-slate-100/80 border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-red-500/30 focus:border-red-500 transition-all"
+                    >
+                    <button 
+                        id="clearSearchBtn" 
+                        onclick="clearSearch()" 
+                        class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                        title="검색어 지우기"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 데스크톱 통계 및 정렬 -->
+                <div class="hidden md:flex items-center gap-3">
+                    <select id="sortSelect" onchange="applyFilters()" class="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl px-3 py-2.5 focus:outline-none focus:border-red-500 cursor-pointer">
+                        <option value="id-asc">도감 번호순 (오름차순)</option>
+                        <option value="id-desc">도감 번호순 (내림차순)</option>
+                        <option value="stat-desc">종족값 총합 높은순</option>
+                        <option value="name-asc">이름순 (가나다)</option>
+                    </select>
+                    <div class="text-xs font-bold bg-slate-900 text-white px-3.5 py-2.5 rounded-xl shadow-sm">
+                        표시: <span id="desktopCount" class="text-red-400">207</span> / <span id="totalDexCount">207</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 세대별 필터 탭 & 타입(속성) 필터링 바 -->
+            <div class="mt-4 pt-3 border-t border-slate-100 space-y-2.5">
+                <!-- 세대 및 메가진화 필터 탭 -->
+                <div id="genFilterContainer" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    <button onclick="selectGenFilter('all')" data-gen="all" class="gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-xs transition-all cursor-pointer">전체 도감 (207)</button>
+                    <button onclick="selectGenFilter('mega')" data-gen="mega" class="gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-extrabold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-xs transition-all cursor-pointer">✨ 메가진화 (26종)</button>
+                    <button onclick="selectGenFilter('1')" data-gen="1" class="gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">1세대 관동 (151)</button>
+                    <button onclick="selectGenFilter('2-4')" data-gen="2-4" class="gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">2~4세대 성도·호연·신오</button>
+                    <button onclick="selectGenFilter('5-9')" data-gen="5-9" class="gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer">5~9세대 하나~팔데아</button>
+                </div>
+
+                <!-- 18가지 속성 필터 -->
+                <div id="typeFilterContainer" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    <!-- 자바스크립트로 타입 버튼 동적 생성 -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 콘텐츠 영역 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <!-- 모바일용 정렬 컨트롤 -->
+        <div class="flex md:hidden items-center justify-between mb-4">
+            <span class="text-xs font-semibold text-slate-500" id="activeFilterLabel">전체 세대 · 전체 속성</span>
+            <select id="mobileSortSelect" onchange="syncSort(this.value)" class="bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl px-3 py-1.5 shadow-sm">
+                <option value="id-asc">도감 번호순 ↑</option>
+                <option value="id-desc">도감 번호순 ↓</option>
+                <option value="stat-desc">종족값 높은순</option>
+                <option value="name-asc">이름순 (가나다)</option>
+            </select>
+        </div>
+
+        <!-- 포켓몬 카드 그리드 -->
+        <div id="pokedexGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
+            <!-- 자바스크립트로 포켓몬 카드 렌더링 -->
+        </div>
+
+        <!-- 더 보기 / 전체 보기 컨트롤 (빠른 청크 렌더링) -->
+        <div id="paginationControls" class="hidden mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onclick="loadMoreCards(48)" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-sm font-extrabold shadow-sm transition-all cursor-pointer">
+                더 보기 (+48마리) <span id="remainingCountBadge" class="text-red-500 ml-1"></span>
+            </button>
+            <button onclick="loadAllCards()" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold shadow-sm transition-all cursor-pointer">
+                남은 포켓몬 모두 펼치기
+            </button>
+        </div>
+
+        <!-- 검색 결과 없음 상태 -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-20 text-center">
+            <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-slate-400">
+                <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-1">일치하는 포켓몬을 찾을 수 없습니다</h3>
+            <p class="text-sm text-slate-500 mb-5">다른 이름, 도감 번호를 입력하거나 속성 필터를 초기화해 보세요.</p>
+            <button onclick="resetFilters()" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-xl shadow-md transition-all">
+                전체 도감 초기화
+            </button>
+        </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <p>© 2026 K-Pokédex Interactive Encyclopedia. Pokémon and Pokémon character names are trademarks of Nintendo.</p>
+            <p>공식 아트워크 제공: PokeAPI Official Artwork</p>
+        </div>
+    </footer>
+
+    <!-- 상세 정보 모달 창 -->
+    <div id="pokemonModal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-6 bg-slate-900/65 backdrop-blur-sm transition-opacity duration-200" onclick="closeModalOnBackdrop(event)">
+        <div id="modalContent" class="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-slate-100 transform transition-all duration-200 scale-95 opacity-0">
+            <!-- 모달 상단 컬러 헤더 & 닫기 버튼 -->
+            <div id="modalHeaderBg" class="relative pt-6 pb-16 px-6 sm:px-8 text-white overflow-hidden transition-colors">
+                <!-- 장식용 몬스터볼 SVG 워터마크 -->
+                <svg class="absolute -right-10 -bottom-12 w-56 h-56 text-white/15 pointer-events-none" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M50 5a45 45 0 0 1 44.7 40H69.3a20 20 0 0 0-38.6 0H5.3A45 45 0 0 1 50 5zm0 90a45 45 0 0 1-44.7-40h25.4a20 20 0 0 0 38.6 0h25.4A45 45 0 0 1 50 95zm0-33a12 12 0 1 1 0-24 12 12 0 0 1 0 24z"/>
+                </svg>
+
+                <div class="relative z-10 flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span id="modalDexNum" class="inline-block font-mono text-sm font-extrabold tracking-wider bg-black/20 backdrop-blur-sm px-3 py-1 rounded-full">No. 0001</span>
+                            <span id="modalGenBadge" class="inline-block text-xs font-bold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">1세대</span>
+                        </div>
+                        <h2 id="modalNameKo" class="text-3xl sm:text-4xl font-black tracking-tight">이상해씨</h2>
+                        <p id="modalNameEn" class="text-sm font-semibold text-white/85 mt-0.5">Bulbasaur · 씨앗포켓몬</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- 이로치(색이 다른 모습) 전환 버튼 -->
+                        <button id="shinyToggleBtn" onclick="toggleShiny()" class="flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/20 hover:bg-black/35 text-white text-xs font-extrabold transition-all cursor-pointer border border-white/20" title="색이 다른 모습(이로치) 전환">
+                            <span id="shinyStarIcon">✨</span>
+                            <span id="shinyBtnText">이로치</span>
+                        </button>
+                        <button onclick="closeModal()" class="p-2.5 rounded-full bg-black/20 hover:bg-black/35 text-white transition-colors focus:outline-none cursor-pointer" aria-label="모달 닫기">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 속성 배지 컨테이너 -->
+                <div id="modalTypes" class="relative z-10 flex flex-wrap gap-2 mt-4"></div>
+            </div>
+
+            <!-- 중앙 아트워크 이미지 (헤더와 본문 경계에 겹침) -->
+            <div class="relative -mt-16 px-6 sm:px-8 flex justify-center z-20 pointer-events-none">
+                <div class="relative w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center">
+                    <div id="shinyAura" class="hidden absolute inset-2 rounded-full bg-amber-300/35 blur-xl animate-pulse"></div>
+                    <div id="megaAura" class="hidden absolute inset-1 rounded-full bg-gradient-to-tr from-cyan-400/40 via-fuchsia-500/40 to-amber-300/40 blur-xl animate-pulse"></div>
+                    <img id="modalImage" src="" alt="포켓몬 아트워크" class="relative z-10 w-full h-full object-contain drop-shadow-[0_14px_18px_rgba(0,0,0,0.28)] animate-float transition-transform duration-300">
+                </div>
+            </div>
+
+            <!-- 모달 본문 정보 -->
+            <div class="px-6 sm:px-8 pb-8 pt-2 space-y-6">
+                <!-- 메가진화 폼 전환 스위처 바 (메가진화 가능 포켓몬일 때만 표시) -->
+                <div id="modalMegaSwitcher" class="hidden rounded-2xl p-3.5 bg-gradient-to-r from-indigo-950 via-purple-900 to-fuchsia-950 text-white shadow-lg border border-fuchsia-400/30">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🧬</span>
+                            <span class="text-xs font-black tracking-wider uppercase text-fuchsia-200">메가진화 (Mega Evolution)</span>
+                        </div>
+                        <span id="modalMegaStoneBadge" class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-amber-200 border border-white/15">
+                            필요 도구: 기본 모습
+                        </span>
+                    </div>
+                    <div id="modalMegaButtons" class="flex flex-wrap gap-2">
+                        <!-- JS로 일반 / 메가 / 메가X / 메가Y 버튼 동적 생성 -->
+                    </div>
+                </div>
+
+                <!-- 도감 설명 박스 -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                        <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/></svg>
+                        도감 설명
+                    </div>
+                    <p id="modalDescription" class="text-sm sm:text-base text-slate-700 leading-relaxed font-medium"></p>
+                </div>
+
+                <!-- 신체 정보 & 특성 그리드 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-center shadow-sm">
+                        <span class="block text-xs font-semibold text-slate-400 mb-1">키 (Height)</span>
+                        <span id="modalHeight" class="text-base font-extrabold text-slate-800">0.7 m</span>
+                    </div>
+                    <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-center shadow-sm">
+                        <span class="block text-xs font-semibold text-slate-400 mb-1">몸무게 (Weight)</span>
+                        <span id="modalWeight" class="text-base font-extrabold text-slate-800">6.9 kg</span>
+                    </div>
+                    <div class="col-span-2 bg-white border border-slate-200/90 rounded-2xl p-3.5 text-center shadow-sm flex flex-col justify-center">
+                        <span class="block text-xs font-semibold text-slate-400 mb-1">대표 특성 (Abilities)</span>
+                        <div id="modalAbilities" class="flex flex-wrap items-center justify-center gap-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- 종족값(Stats) 시각화 -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                            기본 종족값 (Base Stats)
+                        </h3>
+                        <span class="text-xs font-extrabold px-3 py-1 rounded-full bg-slate-900 text-white">
+                            총합 <span id="modalStatTotal" class="text-amber-400 ml-1">318</span>
+                        </span>
+                    </div>
+                    <div id="modalStatsContainer" class="space-y-2.5 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/70">
+                        <!-- JS로 스탯 프로그레스 바 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- 클릭 가능한 진화 계통 -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-extrabold text-slate-500 uppercase tracking-wider">진화 계통 (클릭하여 이동)</h4>
+                    </div>
+                    <div id="modalEvolution" class="flex flex-wrap items-center justify-center gap-2 text-center">
+                        <!-- JS로 클릭 가능한 진화 단계 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- 방어 상성 자동 계산기 (약점 & 저항/무효) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-rose-50/60 border border-rose-200/70 rounded-2xl p-4">
+                        <h4 class="text-xs font-extrabold text-rose-700 uppercase tracking-wider mb-2.5">약점 상성 (2배 / 4배 피해)</h4>
+                        <div id="modalWeaknesses" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <div class="bg-emerald-50/60 border border-emerald-200/70 rounded-2xl p-4">
+                        <h4 class="text-xs font-extrabold text-emerald-700 uppercase tracking-wider mb-2.5">방어 내성 (반감 / 무효)</h4>
+                        <div id="modalResistances" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- 모달 하단 이전/다음 포켓몬 빠른 이동 버튼 -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <button id="prevPokemonBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        이전 포켓몬
+                    </button>
+                    <button onclick="closeModal()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-colors">
+                        닫기
+                    </button>
+                    <button id="nextPokemonBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                        다음 포켓몬
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 1. 속성(타입) 메타데이터 설정 (한국어명, 영문키, 색상 테마)
+         */
+        const TYPE_CONFIG = {
+            all:      { ko: '전체',   bg: 'bg-slate-800',   text: 'text-white',     badge: 'bg-slate-700',   cardBg: 'from-slate-100 to-slate-200', header: 'bg-slate-800' },
+            grass:    { ko: '풀',     bg: 'bg-emerald-500', text: 'text-white',     badge: 'bg-emerald-500', cardBg: 'from-emerald-50 to-teal-100/70', header: 'bg-gradient-to-br from-emerald-500 to-teal-600' },
+            fire:     { ko: '불꽃',   bg: 'bg-orange-500',  text: 'text-white',     badge: 'bg-orange-500',  cardBg: 'from-orange-50 to-amber-100/70', header: 'bg-gradient-to-br from-orange-500 to-red-600' },
+            water:    { ko: '물',     bg: 'bg-sky-500',     text: 'text-white',     badge: 'bg-sky-500',     cardBg: 'from-sky-50 to-blue-100/70',    header: 'bg-gradient-to-br from-sky-500 to-blue-600' },
+            electric: { ko: '전기',   bg: 'bg-amber-400',   text: 'text-slate-900', badge: 'bg-amber-400 text-slate-900', cardBg: 'from-amber-50 to-yellow-100/70', header: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
+            psychic:  { ko: '에스퍼', bg: 'bg-pink-500',    text: 'text-white',     badge: 'bg-pink-500',    cardBg: 'from-pink-50 to-rose-100/70',   header: 'bg-gradient-to-br from-pink-500 to-rose-600' },
+            fighting: { ko: '격투',   bg: 'bg-red-700',     text: 'text-white',     badge: 'bg-red-700',     cardBg: 'from-red-50 to-orange-100/70',  header: 'bg-gradient-to-br from-red-600 to-red-800' },
+            rock:     { ko: '바위',   bg: 'bg-stone-500',   text: 'text-white',     badge: 'bg-stone-500',   cardBg: 'from-stone-100 to-amber-100/50',header: 'bg-gradient-to-br from-stone-500 to-stone-700' },
+            ghost:    { ko: '고스트', bg: 'bg-purple-700',  text: 'text-white',     badge: 'bg-purple-700',  cardBg: 'from-purple-50 to-indigo-100/70',header: 'bg-gradient-to-br from-purple-600 to-indigo-800' },
+            dragon:   { ko: '드래곤', bg: 'bg-indigo-600',  text: 'text-white',     badge: 'bg-indigo-600',  cardBg: 'from-indigo-50 to-violet-100/70',header: 'bg-gradient-to-br from-indigo-600 to-purple-700' },
+            normal:   { ko: '노말',   bg: 'bg-neutral-400', text: 'text-white',     badge: 'bg-neutral-400', cardBg: 'from-neutral-100 to-stone-200/70',header: 'bg-gradient-to-br from-neutral-500 to-stone-600' },
+            ice:      { ko: '얼음',   bg: 'bg-cyan-400',    text: 'text-slate-900', badge: 'bg-cyan-400 text-slate-900', cardBg: 'from-cyan-50 to-sky-100/70', header: 'bg-gradient-to-br from-cyan-400 to-teal-500' },
+            poison:   { ko: '독',     bg: 'bg-fuchsia-600', text: 'text-white',     badge: 'bg-fuchsia-600', cardBg: 'from-fuchsia-50 to-purple-100/70',header: 'bg-gradient-to-br from-fuchsia-600 to-purple-700' },
+            ground:   { ko: '땅',     bg: 'bg-amber-700',   text: 'text-white',     badge: 'bg-amber-700',   cardBg: 'from-amber-100/70 to-orange-100/70',header: 'bg-gradient-to-br from-amber-600 to-amber-800' },
+            flying:   { ko: '비행',   bg: 'bg-indigo-400',  text: 'text-white',     badge: 'bg-indigo-400',  cardBg: 'from-sky-50 to-indigo-100/70',  header: 'bg-gradient-to-br from-sky-400 to-indigo-500' },
+            bug:      { ko: '벌레',   bg: 'bg-lime-600',    text: 'text-white',     badge: 'bg-lime-600',    cardBg: 'from-lime-50 to-green-100/70',  header: 'bg-gradient-to-br from-lime-500 to-green-600' },
+            dark:     { ko: '악',     bg: 'bg-zinc-800',    text: 'text-white',     badge: 'bg-zinc-800',    cardBg: 'from-zinc-200 to-slate-300/70', header: 'bg-gradient-to-br from-zinc-700 to-zinc-900' },
+            steel:    { ko: '강철',   bg: 'bg-slate-500',   text: 'text-white',     badge: 'bg-slate-500',   cardBg: 'from-slate-100 to-zinc-200/80', header: 'bg-gradient-to-br from-slate-500 to-slate-700' },
+            fairy:    { ko: '페어리', bg: 'bg-rose-400',    text: 'text-white',     badge: 'bg-rose-400',    cardBg: 'from-rose-50 to-pink-100/70',   header: 'bg-gradient-to-br from-rose-400 to-pink-500' }
+        };
+
+        // 한국어 속성명 -> 영문 키 매핑
+        const KO_TO_TYPE_KEY = {
+            '풀': 'grass', '불꽃': 'fire', '물': 'water', '전기': 'electric',
+            '에스퍼': 'psychic', '격투': 'fighting', '바위': 'rock', '고스트': 'ghost',
+            '드래곤': 'dragon', '노말': 'normal', '얼음': 'ice', '독': 'poison',
+            '땅': 'ground', '비행': 'flying', '벌레': 'bug', '악': 'dark',
+            '강철': 'steel', '페어리': 'fairy'
+        };
+
+        /**
+         * 18x18 완전 방어 상성 테이블 (공격 타입 -> 방어 타입 배율)
+         */
+        const TYPE_CHART = {
+            normal:   { rock: 0.5, ghost: 0, steel: 0.5 },
+            fire:     { fire: 0.5, water: 0.5, grass: 2, ice: 2, bug: 2, rock: 0.5, dragon: 0.5, steel: 2 },
+            water:    { fire: 2, water: 0.5, grass: 0.5, ground: 2, rock: 2, dragon: 0.5 },
+            electric: { water: 2, electric: 0.5, grass: 0.5, ground: 0, flying: 2, dragon: 0.5 },
+            grass:    { fire: 0.5, water: 2, grass: 0.5, poison: 0.5, ground: 2, flying: 0.5, bug: 0.5, rock: 2, dragon: 0.5, steel: 0.5 },
+            ice:      { fire: 0.5, water: 0.5, grass: 2, ice: 0.5, ground: 2, flying: 2, dragon: 2, steel: 0.5 },
+            fighting: { normal: 2, ice: 2, poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, rock: 2, ghost: 0, dark: 2, steel: 2, fairy: 0.5 },
+            poison:   { grass: 2, poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0, fairy: 2 },
+            ground:   { fire: 2, electric: 2, grass: 0.5, poison: 2, flying: 0, bug: 0.5, rock: 2, steel: 2 },
+            flying:   { electric: 0.5, grass: 2, fighting: 2, bug: 2, rock: 0.5, steel: 0.5 },
+            psychic:  { fighting: 2, poison: 2, psychic: 0.5, dark: 0, steel: 0.5 },
+            bug:      { fire: 0.5, grass: 2, fighting: 0.5, poison: 0.5, flying: 0.5, psychic: 2, ghost: 0.5, dark: 2, steel: 0.5, fairy: 0.5 },
+            rock:     { fire: 2, ice: 2, fighting: 0.5, ground: 0.5, flying: 2, bug: 2, steel: 0.5 },
+            ghost:    { normal: 0, psychic: 2, ghost: 2, dark: 0.5 },
+            dragon:   { dragon: 2, steel: 0.5, fairy: 0 },
+            dark:     { fighting: 0.5, psychic: 2, ghost: 2, dark: 0.5, fairy: 0.5 },
+            steel:    { fire: 0.5, water: 0.5, electric: 0.5, ice: 2, rock: 2, steel: 0.5, fairy: 2 },
+            fairy:    { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 }
+        };
+
+        // 방어 상성 자동 계산기 함수
+        function calculateDefenseMatchups(defTypeKeys) {
+            const allAttackTypes = Object.keys(TYPE_CHART);
+            const weaknesses = []; // 4x, 2x
+            const resistances = []; // 0.5x, 0.25x, 0x
+
+            allAttackTypes.forEach(atkType => {
+                let multiplier = 1;
+                defTypeKeys.forEach(defType => {
+                    const mod = TYPE_CHART[atkType][defType];
+                    if (mod !== undefined) multiplier *= mod;
+                });
+                if (multiplier > 1) {
+                    weaknesses.push({ type: atkType, mult: multiplier });
+                } else if (multiplier < 1) {
+                    resistances.push({ type: atkType, mult: multiplier });
+                }
+            });
+
+            weaknesses.sort((a, b) => b.mult - a.mult);
+            resistances.sort((a, b) => a.mult - b.mult);
+            return { weaknesses, resistances };
+        }
+
+        // PokeAPI 공식 아트워크 URL 헬퍼 (일반 / 이로치)
+        const getArtworkUrl = (id, shiny = false) => shiny
+            ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/${id}.png`
+            : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+
+        /**
+         * 2. 컴팩트 포켓몬 데이터 (관동 1세대 전체 151종 + 2~9세대 인기 대표 30종 = 총 181종)
+         * 형식: [id, ko, en, gen, types(한글), category, height, weight, abilities, stats[H,A,B,C,D,S], evoIds, desc]
+         */
+        const RAW_POKEMON = [
+            // === 1세대 관동지방 (No.0001 ~ No.0151) ===
+            [1,"이상해씨","Bulbasaur",1,["풀","독"],"씨앗포켓몬","0.7","6.9",["심록","엽록소"],[45,49,49,65,65,45],[1,2,3],"태어났을 때부터 등에 이상한 씨앗이 심어져 있으며 몸과 함께 자란다."],
+            [2,"이상해풀","Ivysaur",1,["풀","독"],"씨앗포켓몬","1.0","13.0",["심록","엽록소"],[60,62,63,80,80,60],[1,2,3],"등의 꽃봉오리가 자라나면서 두 발로 일어서기 힘들어지지만 햇빛을 받으면 힘이 솟는다."],
+            [3,"이상해꽃","Venusaur",1,["풀","독"],"씨앗포켓몬","2.0","100.0",["심록","엽록소"],[80,82,83,100,100,80],[1,2,3],"태양 에너지를 영양으로 삼아 큰 꽃을 피운다. 비 온 다음 날 꽃향기가 더욱 강해진다."],
+            [4,"파이리","Charmander",1,["불꽃"],"도롱뇽포켓몬","0.6","8.5",["맹화","선파워"],[39,52,43,60,50,65],[4,5,6],"뜨거운 것을 좋아하는 성격이다. 꼬리의 불꽃은 생명력과 기분을 나타낸다."],
+            [5,"리자드","Charmeleon",1,["불꽃"],"화염포켓몬","1.1","19.0",["맹화","선파워"],[58,64,58,80,65,80],[4,5,6],"불타는 꼬리를 휘두르며 날카로운 발톱으로 상대를 베어 가르는 호전적인 성격이다."],
+            [6,"리자몽","Charizard",1,["불꽃","비행"],"화염포켓몬","1.7","90.5",["맹화","선파워"],[78,84,78,109,85,100],[4,5,6],"암석도 태워버릴 정도의 작열하는 화염을 뿜어내며 강한 상대를 찾아 하늘을 날아다닌다."],
+            [7,"꼬부기","Squirtle",1,["물"],"꼬마거북포켓몬","0.5","9.0",["급류","젖은접시"],[44,48,65,50,64,43],[7,8,9],"긴 목을 등껍질 속에 감출 때 기세 좋게 물대포를 발사해 상대를 놀라게 한다."],
+            [8,"어니부기","Wartortle",1,["물"],"거북포켓몬","1.0","22.5",["급류","젖은접시"],[59,63,80,65,80,58],[7,8,9],"복슬복슬한 귀와 꼬리는 장수의 상징이다. 물속에서 꼬리를 흔들어 균형을 잡는다."],
+            [9,"거북왕","Blastoise",1,["물"],"껍질포켓몬","1.6","85.5",["급류","젖은접시"],[79,83,100,85,105,78],[7,8,9],"등껍질의 분사구에서 발사되는 물대포는 두꺼운 철판도 꿰뚫는 파괴력을 지녔다."],
+            [10,"캐터피","Caterpie",1,["벌레"],"애벌레포켓몬","0.3","2.9",["인분","도주"],[45,30,35,20,20,45],[10,11,12],"식욕이 왕성해 자기 몸보다 큰 잎사귀도 순식간에 먹어 치운다. 더듬이에서 냄새를 낸다."],
+            [11,"단데기","Metapod",1,["벌레"],"번데기포켓몬","0.7","9.9",["탈피"],[50,20,55,25,25,30],[10,11,12],"껍질이 단단해지기 전에 강한 충격을 받으면 속 알맹이가 튀어나올 수 있어 조심한다."],
+            [12,"버터플","Butterfree",1,["벌레","비행"],"나비포켓몬","1.1","32.0",["복안","색안경"],[60,45,50,90,80,70],[10,11,12],"물을 튕겨내는 가루가 날개를 덮고 있어 비가 내리는 날에도 꽃의 꿀을 모을 수 있다."],
+            [13,"뿔충이","Weedle",1,["벌레","독"],"송충이포켓몬","0.3","3.2",["인분","도주"],[40,35,30,20,20,50],[13,14,15],"숲이나 풀밭에 많이 서식한다. 머리 끝에 5cm 정도의 날카로운 독침을 가지고 있다."],
+            [14,"딱충이","Kakuna",1,["벌레","독"],"번데기포켓몬","0.6","10.0",["탈피"],[45,25,50,25,25,35],[13,14,15],"스스로는 거의 움직일 수 없지만 위험이 닥치면 독침을 세워 상대를 찌르기도 한다."],
+            [15,"독침붕","Beedrill",1,["벌레","독"],"독벌포켓몬","1.0","29.5",["벌레의알림","스나이퍼"],[65,90,40,45,80,75],[13,14,15],"고속으로 날아다니며 양손과 엉덩이에 달린 거대한 독침으로 연달아 공격한다."],
+            [16,"구구","Pidgey",1,["노말","비행"],"아기새포켓몬","0.3","1.8",["날카로운눈","갈지자걸음"],[40,45,40,35,35,56],[16,17,18],"싸움을 좋아하지 않는 온순한 성격이지만 풀숲에서 날갯짓으로 모래를 일으켜 쫓아낸다."],
+            [17,"피죤","Pidgeotto",1,["노말","비행"],"새포켓몬","1.1","30.0",["날카로운눈","갈지자걸음"],[63,60,55,50,50,71],[16,17,18],"넓은 영역을 가지고 있어 침입자가 나타나면 날카로운 발톱으로 철저히 쫓아낸다."],
+            [18,"피죤투","Pidgeot",1,["노말","비행"],"새포켓몬","1.5","39.5",["날카로운눈","갈지자걸음"],[83,80,75,70,70,101],[16,17,18],"아름다운 깃털을 펼치며 마하 2의 속도로 하늘을 가른다. 시력이 매우 뛰어나다."],
+            [19,"꼬렛","Rattata",1,["노말"],"쥐포켓몬","0.3","3.5",["도주","근성"],[30,56,35,25,35,72],[19,20],"무엇이든 갉아먹는 습성이 있다. 앞니가 평생 자라기 때문에 단단한 것을 갉아 깎아낸다."],
+            [20,"레트라","Raticate",1,["노말"],"쥐포켓몬","0.7","18.5",["도주","근성"],[55,81,60,50,70,97],[19,20],"뒷발에 작은 물갈퀴가 있어 강을 헤엄쳐 건널 수 있다. 억센 수염으로 균형을 잡는다."],
+            [21,"깨비참","Spearow",1,["노말","비행"],"아기새포켓몬","0.3","2.0",["날카로운눈","스나이퍼"],[40,60,30,31,31,70],[21,22],"날개가 짧아 멀리 날지는 못하지만 날갯짓이 매우 빨라 재빠르게 움직이며 영역을 지킨다."],
+            [22,"깨비드릴조","Fearow",1,["노말","비행"],"부리포켓몬","1.2","38.0",["날카로운눈","스나이퍼"],[65,90,65,61,61,100],[21,22],"커다란 날개로 한 번도 내려앉지 않고 하루 종일 하늘을 날아다닐 수 있는 스태미나를 지녔다."],
+            [23,"아보","Ekans",1,["독"],"뱀포켓몬","2.0","6.9",["위협","탈피"],[35,60,44,40,54,55],[23,24],"풀밭에 소리 없이 기어들어가 먹이를 노린다. 턱을 빼서 자기보다 큰 알도 통째로 삼킨다."],
+            [24,"아보크","Arbok",1,["독"],"코브라포켓몬","3.5","65.0",["위협","탈피"],[60,95,69,65,79,80],[23,24],"배의 무서운 무늬로 상대를 위협해 움직임을 멈추게 한 뒤 몸으로 조여 버린다."],
+            [25,"피카츄","Pikachu",1,["전기"],"쥐포켓몬","0.4","6.0",["정전기","피뢰침"],[35,55,40,50,50,90],[25,26],"양 볼에 작은 전기 주머니를 가지고 있다. 위기 상황일 때 방전하여 강력한 전격을 날린다."],
+            [26,"라이츄","Raichu",1,["전기"],"쥐포켓몬","0.8","30.0",["정전기","피뢰침"],[60,90,55,90,80,110],[25,26],"전기가 가득 모이면 근육이 자극을 받아 평소보다 공격적이 되며 10만 볼트의 전격을 쏜다."],
+            [27,"모래두지","Sandshrew",1,["땅"],"쥐포켓몬","0.6","12.0",["모래숨기","모래헤치기"],[50,75,85,20,30,40],[27,28],"비가 거의 내리지 않는 건조한 땅속에 깊은 굴을 파고 산다. 위험하면 공처럼 몸을 만다."],
+            [28,"고지","Sandslash",1,["땅"],"쥐포켓몬","1.0","29.5",["모래숨기","모래헤치기"],[75,100,110,45,55,65],[27,28],"등의 가시는 딱딱해진 피부가 변한 것이다. 1년에 한 번씩 오래된 가시가 빠지고 새로 돋아난다."],
+            [29,"니드런♀","Nidoran♀",1,["독"],"독침포켓몬","0.4","7.0",["독가시","투쟁심"],[55,47,52,40,40,41],[29,30,31],"몸집은 작지만 맹독을 품은 가시를 지니고 있어 주의해야 한다. 암컷은 뿔이 작다."],
+            [30,"니드리나","Nidorina",1,["독"],"독침포켓몬","0.8","20.0",["독가시","투쟁심"],[70,62,67,55,55,56],[29,30,31],"위험을 느끼면 온몸의 가시를 곤두세운다. 가족이나 동료와 함께 있을 때는 가시를 접는다."],
+            [31,"니드퀸","Nidoqueen",1,["독","땅"],"드릴포켓몬","1.3","60.0",["독가시","우격다짐"],[90,92,87,75,85,76],[29,30,31],"딱딱한 비늘로 덮인 튼튼한 몸을 가졌다. 새끼를 지킬 때 가장 강한 힘을 발휘한다."],
+            [32,"니드런♂","Nidoran♂",1,["독"],"독침포켓몬","0.5","9.0",["독가시","투쟁심"],[46,57,40,40,40,50],[32,33,34],"큰 귀를 세워 주위의 기척을 살핀다. 위험을 감지하면 맹독이 흐르는 뿔로 먼저 찌른다."],
+            [33,"니드리노","Nidorino",1,["독"],"독침포켓몬","0.9","19.5",["독가시","투쟁심"],[61,72,57,55,55,65],[32,33,34],"화나기 쉬운 성격이다. 다이아몬드보다 단단한 뿔을 휘두르며 상대를 거칠게 몰아붙인다."],
+            [34,"니드킹","Nidoking",1,["독","땅"],"드릴포켓몬","1.4","62.0",["독가시","우격다짐"],[81,102,77,85,75,85],[32,33,34],"강철 같은 피부와 거대한 꼬리를 가졌다. 꼬리 한 방으로 전봇대도 두 동강 낼 수 있다."],
+            [35,"삐삐","Clefairy",1,["페어리"],"요정포켓몬","0.6","7.5",["헤롱헤롱바디","매직가드"],[70,45,48,60,65,35],[35,36],"보름달이 뜨는 밤에 동료들과 모여 춤을 춘다. 등에 달빛을 모으면 공중에 뜰 수 있다."],
+            [36,"픽시","Clefable",1,["페어리"],"요정포켓몬","1.3","40.0",["헤롱헤롱바디","매직가드"],[95,70,73,95,90,60],[35,36],"1km 떨어진 곳에서 떨어지는 바늘 소리도 들을 수 있을 만큼 귀가 밝아 조용한 산속에 산다."],
+            [37,"식스테일","Vulpix",1,["불꽃"],"여우포켓몬","0.6","9.9",["타오르는불꽃","가뭄"],[38,41,40,50,65,65],[37,38],"태어났을 때는 하얀 꼬리가 하나뿐이지만 자라면서 끝이 갈라져 아름다운 6개의 꼬리가 된다."],
+            [38,"나인테일","Ninetales",1,["불꽃"],"여우포켓몬","1.1","19.9",["타오르는불꽃","가뭄"],[73,76,75,81,100,100],[37,38],"황금빛 털과 9개의 긴 꼬리를 지닌 신비로운 포켓몬. 1000년을 산다고 전해지며 영력이 강하다."],
+            [39,"푸린","Jigglypuff",1,["노말","페어리"],"풍선포켓몬","0.5","5.5",["헤롱헤롱바디","승기"],[115,45,20,45,25,20],[39,40],"둥글고 커다란 눈동자로 상대를 유혹한 뒤 기분 좋은 자장가를 들려주어 잠들게 만든다."],
+            [40,"푸크린","Wigglytuff",1,["노말","페어리"],"풍선포켓몬","1.0","12.0",["헤롱헤롱바디","승기"],[140,70,45,85,50,45],[39,40],"숨을 깊이 들이마시면 몸이 풍선처럼 크게 부풀어 오른다. 극세사 같은 털은 감촉이 최고다."],
+            [41,"주뱃","Zubat",1,["독","비행"],"박쥐포켓몬","0.8","7.5",["정신력","틈새포착"],[40,45,35,30,40,55],[41,42],"양쪽 눈이 퇴화하여 보이지 않지만 입에서 초음파를 발사해 주위의 장애물을 정확히 파악한다."],
+            [42,"골뱃","Golbat",1,["독","비행"],"박쥐포켓몬","1.6","55.0",["정신력","틈새포착"],[75,80,70,65,75,90],[41,42],"날카로운 이빨로 한 번 물면 좀처럼 놓지 않는다. 한 번에 300cc의 피를 빨아들이기도 한다."],
+            [43,"뚜벅쵸","Oddish",1,["풀","독"],"잡초포켓몬","0.5","5.4",["엽록소","도주"],[45,50,55,75,65,30],[43,44,45],"낮에는 차가운 땅속에 몸을 묻고 있다가 밤이 되면 달빛을 받으며 걸어 다니면서 씨앗을 뿌린다."],
+            [44,"냄새꼬","Gloom",1,["풀","독"],"잡초포켓몬","0.8","8.6",["엽록소","악취"],[60,65,70,85,75,40],[43,44,45],"입에서 흘리는 꿀처럼 보이는 침은 사실 기절할 만큼 지독한 냄새가 나는 액체다."],
+            [45,"라플레시아","Vileplume",1,["풀","독"],"꽃포켓몬","1.2","18.6",["엽록소","포자"],[75,80,85,110,90,50],[43,44,45],"세계에서 가장 큰 꽃잎을 가졌다. 걸을 때마다 커다란 꽃잎이 흔들리며 독가루를 흩뿌린다."],
+            [46,"파라스","Paras",1,["벌레","풀"],"버섯포켓몬","0.3","5.4",["포자","건조피부"],[35,70,55,45,55,25],[46,47],"등에 자라는 동충하초라는 버섯이 벌레로부터 영양분을 흡수하며 함께 성장한다."],
+            [47,"파라섹트","Parasect",1,["벌레","풀"],"버섯포켓몬","1.0","29.5",["포자","건조피부"],[60,95,80,60,80,30],[46,47],"거대해진 버섯이 벌레의 의식을 조종한다. 어둡고 축축한 곳을 좋아하며 버섯 포자를 흩뿌린다."],
+            [48,"콘팡","Venonat",1,["벌레","독"],"곤충포켓몬","1.0","30.0",["복안","색안경"],[60,55,50,40,55,45],[48,49],"레이더 역할을 하는 커다란 겹눈을 가졌다. 어둠 속에서도 작은 먹이를 놓치지 않고 찾아낸다."],
+            [49,"도나리","Venomoth",1,["벌레","독"],"독나방포켓몬","1.5","12.5",["인분","색안경"],[70,65,60,90,75,90],[48,49],"날개에 묻은 인분은 색깔에 따라 효과가 다르며 닿으면 마비되거나 맹독에 걸리게 된다."],
+            [50,"디그다","Diglett",1,["땅"],"두더지포켓몬","0.2","0.8",["모래숨기","개미지옥"],[10,55,25,35,45,95],[50,51],"땅속 얕은 곳을 파고 이동한다. 디그다가 지나간 자리는 땅이 부풀어 올라 금방 알 수 있다."],
+            [51,"닥트리오","Dugtrio",1,["땅"],"두더지포켓몬","0.7","33.3",["모래숨기","개미지옥"],[35,100,50,50,70,120],[50,51],"세 쌍둥이 디그다가 합쳐진 모습이다. 세 머리가 번갈아 땅을 파며 지하 100km까지 파고든다."],
+            [52,"나옹","Meowth",1,["노말"],"요괴고양이포켓몬","0.4","4.2",["픽업","테크니션"],[40,45,35,40,40,90],[52,53],"반짝반짝 빛나는 동전을 매우 좋아한다. 밤이 되면 눈동자가 빛나며 거리를 어슬렁거린다."],
+            [53,"페르시온","Persian",1,["노말"],"샴고양이포켓몬","1.0","32.0",["유연","테크니션"],[65,70,60,65,65,115],[52,53],"우아한 털과 기품 있는 걸음걸이를 가졌지만 성격은 매우 거칠어 길들이기 까다롭다."],
+            [54,"고라파덕","Psyduck",1,["물"],"오리포켓몬","0.8","19.6",["습기","날씨부정"],[50,52,48,65,50,55],[54,55],"항상 두통에 시달리고 있다. 두통이 심해지면 자신도 모르게 강력한 염력을 발휘한다."],
+            [55,"골덕","Golduck",1,["물"],"오리포켓몬","1.7","76.6",["습기","날씨부정"],[80,82,78,95,80,85],[54,55],"물갈퀴가 발달해 올림픽 수영 선수보다 빠르게 헤엄친다. 이마의 붉은 보석이 빛날 때 초능력을 쓴다."],
+            [56,"망키","Mankey",1,["격투"],"돈숭이포켓몬","0.5","28.0",["의기양양","화풀이"],[40,80,35,35,45,70],[56,57],"평소에는 온순하지만 사소한 일에도 금방 화를 내며 한 번 날뛰기 시작하면 아무도 말릴 수 없다."],
+            [57,"성원숭","Primeape",1,["격투"],"돈숭이포켓몬","1.0","32.0",["의기양양","화풀이"],[65,105,60,60,70,95],[56,57],"누군가와 눈이 마주치면 화를 내고, 도망치면 화를 내며, 때려눕혀도 화를 내는 분노의 화신이다."],
+            [58,"가디","Growlithe",1,["불꽃"],"강아지포켓몬","0.7","19.0",["위협","타오르는불꽃"],[55,70,45,70,50,60],[58,59],"사람에게 매우 잘 따르며 충성심이 강하다. 자기 영역에 들어온 적에게는 용감하게 짖어 쫓아낸다."],
+            [59,"윈디","Arcanine",1,["불꽃"],"전설포켓몬","1.9","155.0",["위협","타오르는불꽃"],[90,110,80,100,80,95],[58,59],"예로부터 수많은 사람을 사로잡은 아름다운 전설의 포켓몬. 초원을 바람처럼 질주한다."],
+            [60,"발챙이","Poliwag",1,["물"],"올챙이포켓몬","0.6","12.4",["저수","습기"],[40,50,40,40,40,90],[60,61,62],"배의 소용돌이 무늬는 투명한 피부 너머로 내장이 비쳐 보이는 것이다. 헤엄치는 것을 더 잘한다."],
+            [61,"슈륙챙이","Poliwhirl",1,["물"],"올챙이포켓몬","1.0","20.0",["저수","습기"],[65,65,65,50,50,90],[60,61,62],"배의 소용돌이를 계속 바라보고 있으면 졸음이 쏟아진다. 육지에서는 땀으로 몸을 적셔 촉촉함을 유지한다."],
+            [62,"강챙이","Poliwrath",1,["물","격투"],"올챙이포켓몬","1.3","54.0",["저수","습기"],[90,95,95,70,90,70],[60,61,62],"전신의 근육이 단련되어 태평양도 거뜬히 헤엄쳐 건넌다. 펀치 한 방에 큰 바위도 산산조각 낸다."],
+            [63,"캐이시","Abra",1,["에스퍼"],"초능력포켓몬","0.9","19.5",["싱크로","정신력"],[25,20,15,105,55,90],[63,64,65],"하루에 18시간을 잠잔다. 자고 있는 동안에도 위험을 감지하면 순간이동으로 안전한 곳으로 도망친다."],
+            [64,"윤겔라","Kadabra",1,["에스퍼"],"초능력포켓몬","1.3","56.5",["싱크로","정신력"],[40,35,30,120,70,105],[63,64,65],"강력한 사이코 파워를 방출하기 때문에 윤겔라 근처에서는 시계가 거꾸로 돌아가는 기현상이 일어난다."],
+            [65,"후딘","Alakazam",1,["에스퍼"],"초능력포켓몬","1.5","48.0",["싱크로","정신력"],[55,50,45,135,95,120],[63,64,65],"지능지수(IQ)가 5000을 넘는다. 근육이 약한 대신 강력한 염력으로 자기 몸을 띄워 움직인다."],
+            [66,"알통몬","Machop",1,["격투"],"괴력포켓몬","0.8","19.5",["근성","노가드"],[70,80,50,35,35,35],[66,67,68],"체격은 어린아이만 하지만 어른 100명을 집어 던질 수 있는 괴력을 지녔으며 매일 근육을 단련한다."],
+            [67,"근육몬","Machoke",1,["격투"],"괴력포켓몬","1.5","70.5",["근성","노가드"],[80,100,70,50,60,45],[66,67,68],"지칠 줄 모르는 강인한 육체를 가졌다. 허리의 파워 세이브 벨트로 넘치는 힘을 조절한다."],
+            [68,"괴력몬","Machamp",1,["격투"],"괴력포켓몬","1.6","130.0",["근성","노가드"],[90,130,80,65,85,55],[66,67,68],"발달한 4개의 팔로 2초 동안 1000발의 펀치를 날린다. 생각보다 먼저 팔이 움직이는 달인이다."],
+            [69,"모다피","Bellsprout",1,["풀","독"],"꽃포켓몬","0.7","4.0",["엽록소","먹보"],[50,75,35,70,30,40],[69,70,71],"날씬한 몸을 유연하게 움직여 적의 공격을 피한다. 땅속에 뿌리를 박아 수분을 흡수한다."],
+            [70,"우츠동","Weepinbell",1,["풀","독"],"파리잡이포켓몬","1.0","6.4",["엽록소","먹보"],[65,90,50,85,45,55],[69,70,71],"배가 고프면 움직이는 것은 무엇이든 삼켜버린 뒤 몸속의 용해액으로 녹여 먹는다."],
+            [71,"우츠보트","Victreebel",1,["풀","독"],"파리잡이포켓몬","1.7","15.5",["엽록소","먹보"],[80,105,65,100,70,70],[69,70,71],"꿀 같은 향기로 먹이를 입속으로 유인한다. 한 번 빠지면 용해액에 녹아 뼈조차 남지 않는다."],
+            [72,"왕눈해","Tentacool",1,["물","독"],"해파리포켓몬","0.9","45.5",["클리어바디","해감액"],[40,40,35,50,100,70],[72,73],"몸의 99%가 수분으로 이루어져 있다. 수정 같은 눈에서 이상한 광선을 발사한다."],
+            [73,"독파리","Tentacruel",1,["물","독"],"해파리포켓몬","1.6","55.0",["클리어바디","해감액"],[80,70,65,80,120,100],[72,73],"80개의 촉수를 자유자재로 늘려 사냥감을 휘감은 뒤 독침으로 찔러 움직임을 봉쇄한다."],
+            [74,"꼬마돌","Geodude",1,["바위","땅"],"암석포켓몬","0.4","20.0",["돌머리","옹골참"],[40,80,100,30,30,20],[74,75,76],"산길에 흔히 굴러다니는 돌멩이와 닮아서 등산객이 모르고 밟았다가 화를 내기도 한다."],
+            [75,"데구리","Graveler",1,["바위","땅"],"암석포켓몬","1.0","105.0",["돌머리","옹골참"],[55,95,115,45,45,35],[74,75,76],"걷는 것보다 산비탈을 굴러 내려가는 것이 훨씬 빠르기 때문에 바위를 부수며 굴러다닌다."],
+            [76,"딱구리","Golem",1,["바위","땅"],"메가톤포켓몬","1.4","300.0",["돌머리","옹골참"],[80,120,130,55,65,45],[74,75,76],"암석처럼 단단한 껍질은 다이너마이트로 폭파해도 흠집 하나 나지 않을 정도로 견고하다."],
+            [77,"포니타","Ponyta",1,["불꽃"],"불의말포켓몬","1.0","30.0",["도주","타오르는불꽃"],[50,85,55,65,65,90],[77,78],"태어난 지 1시간 만에 달릴 수 있게 된다. 불타는 갈기는 마음을 허락한 사람에게는 뜨겁지 않다."],
+            [78,"날쌩마","Rapidash",1,["불꽃"],"불의말포켓몬","1.7","95.0",["도주","타오르는불꽃"],[65,100,70,80,80,105],[77,78],"시속 240km의 맹렬한 속도로 달린다. 갈기의 불꽃이 길게 타오를수록 최고 속도에 가까워진다."],
+            [79,"야돈","Slowpoke",1,["물","에스퍼"],"얼간이포켓몬","1.2","36.0",["둔감","마이페이스"],[90,65,65,40,40,15],[79,80],"항상 멍하니 무슨 생각을 하는지 알 수 없다. 꼬리를 물려도 5초가 지나서야 아픔을 느낀다."],
+            [80,"야도란","Slowbro",1,["물","에스퍼"],"기생포켓몬","1.6","78.5",["둔감","마이페이스"],[95,75,110,100,80,30],[79,80],"꼬리에 셀러가 달라붙어 진화했다. 꼬리의 무게 덕분에 두 발로 서서 걸을 수 있게 되었다."],
+            [81,"코일","Magnemite",1,["전기","강철"],"자석포켓몬","0.3","6.0",["자력","옹골참"],[25,35,70,95,55,45],[81,82],"양옆의 자석에서 반중력을 발생시켜 공중에 떠 있다. 전기를 먹이로 삼아 송전선에 붙기도 한다."],
+            [82,"레어코일","Magneton",1,["전기","강철"],"자석포켓몬","1.0","60.0",["자력","옹골참"],[50,60,95,120,70,70],[81,82],"3마리의 코일이 강한 자력으로 연결되어 있다. 레어코일이 나타나면 주위 기온이 2도 올라간다."],
+            [83,"파오리","Farfetch'd",1,["노말","비행"],"청둥오리포켓몬","0.8","15.0",["날카로운눈","정신력"],[52,90,55,58,62,60],[83],"항상 들고 다니는 파 줄기는 소중한 무기이자 비상식량이다. 파가 자라는 곳을 목숨 걸고 지킨다."],
+            [84,"두두","Doduo",1,["노말","비행"],"쌍둥이새포켓몬","1.4","39.2",["도주","일찍기상"],[35,85,45,35,35,75],[84,85],"날개는 짧아 날 수 없지만 발달한 두 다리로 시속 100km로 달릴 수 있다. 두 머리가 교대로 잠을 잔다."],
+            [85,"두트리오","Dodrio",1,["노말","비행"],"세쌍둥이새포켓몬","1.8","85.2",["도주","일찍기상"],[60,110,70,60,60,110],[84,85],"기쁨, 분노, 슬픔을 나타내는 3개의 머리가 고도의 전략을 짜며 초원을 질주한다."],
+            [86,"쥬쥬","Seel",1,["물"],"강치포켓몬","1.1","90.0",["두꺼운지방","촉촉바디"],[65,45,55,45,70,45],[86,87],"추운 바다를 좋아한다. 머리 위의 단단한 뿔로 두꺼운 빙산을 깨부수며 헤엄친다."],
+            [87,"쥬레곤","Dewgong",1,["물","얼음"],"강치포켓몬","1.7","120.0",["두꺼운지방","촉촉바디"],[90,70,80,70,95,70],[86,87],"눈처럼 새하얀 몸은 빙산 위에서 천적의 눈을 피하기에 안성맞춤이다. 추위에는 절대 지지 않는다."],
+            [88,"질퍽이","Grimer",1,["독"],"진흙포켓몬","0.9","30.0",["악취","점착"],[80,80,50,40,50,25],[88,89],"오염된 진흙에 달의 X선이 닿아 탄생했다. 질퍽이가 지나간 자리에는 풀 한 포기 자라지 않는다."],
+            [89,"질뻐기","Muk",1,["독"],"진흙포켓몬","1.2","30.0",["악취","점착"],[105,105,75,65,100,50],[88,89],"온몸에서 지독한 악취가 나는 맹독성 체액이 배어 나온다. 한 방울만 떨어져도 연못이 썩어버린다."],
+            [90,"셀러","Shellder",1,["물"],"두조개포켓몬","0.3","4.0",["조가비갑옷","스킬링크"],[30,65,100,45,25,40],[90,91],"다이아몬드보다 단단한 껍데기를 가졌다. 껍데기를 여닫는 반동으로 뒤로 헤엄칠 수 있다."],
+            [91,"파르셀","Cloyster",1,["물","얼음"],"두조개포켓몬","1.5","132.5",["조가비갑옷","스킬링크"],[50,95,180,85,45,70],[90,91],"네이팜탄으로도 부술 수 없는 초경도 껍데기를 가졌다. 공격할 때만 잠깐 껍데기를 연다."],
+            [92,"고오스","Gastly",1,["고스트","독"],"가스포켓몬","1.3","0.1",["부유"],[30,35,30,100,35,80],[92,93,94],"몸의 95%가 독가스로 이루어져 있어 강한 바람이 불면 날아가 버릴 정도로 가볍다."],
+            [93,"고우스트","Haunter",1,["고스트","독"],"가스포켓몬","1.6","0.1",["부유"],[45,50,45,115,55,95],[92,93,94],"벽을 뚫고 들어와 어둠 속에서 사냥감을 노린다. 차가운 혀에 핥이면 영혼을 빼앗긴다고 한다."],
+            [94,"팬텀","Gengar",1,["고스트","독"],"그림자포켓몬","1.5","40.5",["저주받은바디"],[60,65,60,130,75,110],[92,93,94],"보름달이 뜬 밤에 그림자가 제멋대로 움직이며 웃는다면 팬텀의 소행이다. 주위의 열을 빼앗는다."],
+            [95,"롱스톤","Onix",1,["바위","땅"],"돌뱀포켓몬","8.8","210.0",["돌머리","옹골참"],[35,45,160,30,45,70],[95],"땅속을 시속 80km로 파고들며 이동한다. 자라면서 몸의 암석 성분이 변해 검은 다이아몬드처럼 단단해진다."],
+            [96,"슬리프","Drowzee",1,["에스퍼"],"최면포켓몬","1.0","32.4",["불면","예지몽"],[60,48,45,43,90,42],[96,97],"꿈을 먹이로 삼는 포켓몬. 즐거운 꿈을 먹으면 기분이 좋아져 코를 벌름거린다."],
+            [97,"슬리퍼","Hypno",1,["에스퍼"],"최면포켓몬","1.6","75.6",["불면","예지몽"],[85,73,70,73,115,67],[96,97],"항상 손에 든 추를 흔들며 최면술을 건다. 추를 3초만 바라보아도 깊은 잠에 빠져버린다."],
+            [98,"크랩","Krabby",1,["물"],"게포켓몬","0.4","6.5",["괴력집게","조가비갑옷"],[30,105,90,25,25,50],[98,99],"해변의 모래사장에 구멍을 파고 산다. 싸우다가 집게가 떨어져도 금방 다시 자라난다."],
+            [99,"킹크랩","Kingler",1,["물"],"집게포켓몬","1.3","60.0",["괴력집게","조가비갑옷"],[55,130,115,50,50,75],[98,99],"한쪽만 거대하게 발달한 집게는 1만 마력의 파괴력을 지녔지만 너무 무거워서 균형을 잡기 힘들다."],
+            [100,"찌리리공","Voltorb",1,["전기"],"볼포켓몬","0.5","10.4",["방음","정전기"],[40,30,50,55,55,100],[100,101],"몬스터볼과 똑같이 생겨서 잘못 만졌다가 감전되는 사람이 많다. 작은 충격에도 자폭한다."],
+            [101,"붐볼","Electrode",1,["전기"],"볼포켓몬","1.2","66.6",["방음","정전기"],[60,50,70,80,80,150],[100,101],"체내에 전기 에너지를 한계까지 모으고 있어 심심할 때 스스로 폭발해 버리는 위험한 포켓몬이다."],
+            [102,"아라리","Exeggcute",1,["풀","에스퍼"],"알포켓몬","0.4","2.5",["엽록소","수확"],[60,40,80,60,45,40],[102,103],"6개의 알이 서로 텔레파시로 대화하며 항상 함께 행동한다. 하나가 떨어져도 금세 다시 모인다."],
+            [103,"나시","Exeggutor",1,["풀","에스퍼"],"야자열매포켓몬","2.0","120.0",["엽록소","수확"],[95,95,85,125,75,55],[102,103],"걸어 다니는 열대우림이라 불린다. 3개의 머리는 각자 다른 생각을 하지만 사이가 매우 좋다."],
+            [104,"탕구리","Cubone",1,["땅"],"고독포켓몬","0.4","6.5",["돌머리","피뢰침"],[50,50,95,40,50,35],[104,105],"사별한 어미의 해골을 머리에 쓰고 있다. 외로울 때면 크게 울부짖어 해골이 울린다."],
+            [105,"텅구리","Marowak",1,["땅"],"뼈다귀포켓몬","1.0","45.0",["돌머리","피뢰침"],[60,80,110,50,80,45],[104,105],"과거의 슬픔을 극복하고 강인해졌다. 손에 든 뼈다귀를 부메랑처럼 날려 적을 명중시킨다."],
+            [106,"시라소몬","Hitmonlee",1,["격투"],"킥포켓몬","1.5","49.8",["유연","이판사판"],[50,120,53,35,110,87],[106],"용수철처럼 자유자재로 늘어나는 다리로 멀리 떨어진 적도 연속 킥으로 차버리는 킥의 명수다."],
+            [107,"홍수몬","Hitmonchan",1,["격투"],"펀치포켓몬","1.4","50.2",["날카로운눈","철주먹"],[50,105,79,35,110,76],[107],"프로 복서의 혼이 깃들어 있다. 신칸센보다 빠른 펀치는 공기를 가를 때 불꽃을 일으킨다."],
+            [108,"내루미","Lickitung",1,["노말"],"핥기포켓몬","1.2","65.5",["마이페이스","둔감"],[90,55,75,60,75,30],[108],"키보다 긴 2m짜리 혀를 손처럼 자유롭게 움직인다. 핥으면 끈적끈적한 침이 묻어 가려워진다."],
+            [109,"또가스","Koffing",1,["독"],"독가스포켓몬","0.6","1.0",["부유","화학변화가스"],[40,65,95,60,45,35],[109,110],"얇은 풍선 같은 몸속에 맹독 가스가 가득 차 있다. 기온이 올라가면 가스가 팽창해 폭발할 수 있다."],
+            [110,"또도가스","Weezing",1,["독"],"독가스포켓몬","1.2","9.5",["부유","화학변화가스"],[65,90,120,85,70,60],[109,110],"두 개의 또가스가 합체했다. 한쪽이 부풀어 오르면 다른 한쪽이 줄어들며 독가스를 농축한다."],
+            [111,"뿔카노","Rhyhorn",1,["땅","바위"],"뿔포켓몬","1.0","115.0",["피뢰침","돌머리"],[80,85,95,30,30,25],[111,112],"단순한 성격이라 한 번 달리기 시작하면 목표물에 부딪힐 때까지 멈추지 않고 돌진한다."],
+            [112,"코뿌리","Rhydon",1,["땅","바위"],"드릴포켓몬","1.9","120.0",["피뢰침","돌머리"],[105,130,120,45,45,40],[111,112],"진화하면서 뒷다리로 걷게 되었다. 드릴처럼 회전하는 뿔로 암석도 단숨에 뚫어버린다."],
+            [113,"럭키","Chansey",1,["노말"],"알포켓몬","1.1","34.6",["자연회복","하늘의은총"],[250,5,5,35,105,50],[113],"배의 주머니에 영양 만점인 맛있는 알을 품고 있다. 상처 입은 포켓몬을 보면 알을 나누어 준다."],
+            [114,"덩쿠리","Tangela",1,["풀"],"덩굴포켓몬","1.0","35.0",["엽록소","재생력"],[65,55,115,100,40,60],[114],"온몸이 파란 덩굴로 덮여 있어 정체를 알 수 없다. 덩굴이 끊어져도 다음 날이면 금방 다시 자란다."],
+            [115,"캥카","Kangaskhan",1,["노말"],"가족포켓몬","2.2","80.0",["일찍기상","배짱"],[105,95,80,40,80,90],[115],"배의 주머니에서 새끼를 소중히 키운다. 새끼를 지키기 위해서라면 어떤 강적에게도 맞선다."],
+            [116,"쏘드라","Horsea",1,["물"],"드래곤포켓몬","0.4","8.0",["쓱쓱","스나이퍼"],[30,40,70,70,25,60],[116,117],"등지느러미를 재빠르게 움직여 앞뒤로 자유롭게 헤엄친다. 위험을 느끼면 입에서 먹물을 뿜는다."],
+            [117,"시드라","Seadra",1,["물"],"드래곤포켓몬","1.2","25.0",["독가시","스나이퍼"],[55,65,95,95,45,85],[116,117],"온몸에 날카로운 독가시가 돋아나 있어 함부로 만지면 기절할 수 있다. 소용돌이 속에서도 끄떡없다."],
+            [118,"콘치","Goldeen",1,["물"],"금붕어포켓몬","0.6","15.0",["쓱쓱","수유의베일"],[45,67,60,35,50,63],[118,119],"아름다운 지느러미를 우아하게 흔들며 헤엄쳐 물의 여왕이라 불린다. 이마의 뿔은 드릴처럼 날카롭다."],
+            [119,"왕콘치","Seaking",1,["물"],"금붕어포켓몬","1.3","39.0",["쓱쓱","수유의베일"],[80,92,65,65,80,68],[118,119],"가을이 되면 산란을 위해 힘차게 폭포를 거슬러 올라간다. 바위에 뿔로 구멍을 파서 둥지를 만든다."],
+            [120,"별가사리","Staryu",1,["물"],"별포켓몬","0.8","34.5",["발광","자연회복"],[30,45,55,70,55,85],[120,121],"밤하늘의 별이 빛날 때 해수면으로 떠올라 몸의 중심핵을 붉게 점멸시킨다. 몸이 잘려도 재생한다."],
+            [121,"아쿠스타","Starmie",1,["물","에스퍼"],"수수께끼포켓몬","1.1","80.0",["발광","자연회복"],[60,75,85,100,85,115],[120,121],"기하학적인 몸 모양 때문에 우주에서 온 생물이라는 소문이 있다. 중앙의 핵이 무지갯빛으로 빛난다."],
+            [122,"마임맨","Mr. Mime",1,["에스퍼","페어리"],"배리어포켓몬","1.3","54.5",["방음","필터"],[40,45,65,100,120,90],[122],"팬터마임의 달인이다. 손가락 끝에서 나오는 파동으로 공기를 굳혀 보이지 않는 벽을 만든다."],
+            [123,"스라크","Scyther",1,["벌레","비행"],"사마귀포켓몬","1.5","56.0",["벌레의알림","테크니션"],[70,110,80,55,80,105],[123,212],"닌자처럼 재빠르게 움직여 잔상을 남긴다. 양팔의 날카로운 낫은 큰 나무도 단숨에 베어 넘긴다."],
+            [124,"루주라","Jynx",1,["얼음","에스퍼"],"인간형태포켓몬","1.4","40.6",["둔감","예지몽"],[65,50,35,115,95,95],[124],"허리를 리드미컬하게 흔들며 춤추듯 걷는다. 루주라를 본 사람은 자신도 모르게 춤을 추게 된다."],
+            [125,"에레브","Electabuzz",1,["전기"],"전기포켓몬","1.1","30.0",["정전기","의기양양"],[65,83,57,95,85,105],[125],"강한 전기를 좋아해 발전소 근처에 자주 나타난다. 몸 표면에 항상 전기가 흘러 어둠 속에서 푸르게 빛난다."],
+            [126,"마그마","Magmar",1,["불꽃"],"불뿜기포켓몬","1.3","44.5",["불꽃몸","의기양양"],[65,95,57,100,85,93],[126],"화산 분화구 근처에서 태어났다. 체온이 1200도에 달해 숨을 쉴 때마다 입에서 아지랑이가 피어오른다."],
+            [127,"쁘사이저","Pinsir",1,["벌레"],"뿔집게포켓몬","1.5","55.0",["괴력집게","틀깨기"],[65,125,100,55,70,85],[127],"2개의 거대한 뿔로 상대를 집어 두 동강 낼 정도의 괴력을 가졌다. 추위에 약해 밤에는 땅속에서 잔다."],
+            [128,"켄타로스","Tauros",1,["노말"],"성난소포켓몬","1.4","88.4",["위협","화풀이"],[75,100,95,40,70,110],[128],"3개의 꼬리로 자기 몸을 때리며 기합을 넣은 뒤 전속력으로 돌진하는 스태미나 넘치는 포켓몬이다."],
+            [129,"잉어킹","Magikarp",1,["물"],"물고기포켓몬","0.9","10.0",["쓱쓱","주눅"],[20,10,55,15,20,80],[129,130],"힘도 스피드도 거의 없어 세계에서 가장 약하고 한심한 포켓몬이라 불리지만 생명력만큼은 질기다."],
+            [130,"갸라도스","Gyarados",1,["물","비행"],"흉악포켓몬","6.5","235.0",["위협","자기과신"],[95,125,79,60,100,81],[129,130],"한번 모습을 드러내면 주위가 전부 불타버릴 때까지 분노가 가라앉지 않는 흉폭한 바다의 화신이다."],
+            [131,"라프라스","Lapras",1,["물","얼음"],"탈것포켓몬","2.5","220.0",["저수","조가비갑옷"],[130,85,80,85,95,60],[131],"사람의 말을 이해하는 높은 지능과 상냥한 마음을 가졌다. 사람을 등에 태우고 바다를 건넌다."],
+            [132,"메타몽","Ditto",1,["노말"],"변신포켓몬","0.3","4.0",["유연","괴짜"],[48,48,48,48,48,48],[132],"세포 구성을 자유자재로 재조합하여 본 것이라면 무엇이든 똑같이 변신할 수 있는 신비한 포켓몬."],
+            [133,"이브이","Eevee",1,["노말"],"진화포켓몬","0.3","6.5",["도주","적응력"],[55,55,50,45,65,55],[133,134,135,136,196,197,470,471,700],"불규칙한 유전자를 가지고 있어 주위 환경에 따라 다양한 모습으로 진화할 수 있는 가능성을 지녔다."],
+            [134,"샤미드","Vaporeon",1,["물"],"거품뿜기포켓몬","1.0","29.0",["저수","촉촉바디"],[130,65,60,110,95,65],[133,134],"세포 조직이 물 분자와 닮아 있어 물속에 들어가면 녹아들듯 모습을 감출 수 있다."],
+            [135,"쥬피썬더","Jolteon",1,["전기"],"번개포켓몬","0.8","24.5",["축전","속보"],[65,65,60,110,95,130],[133,135],"화가 나거나 놀라면 온몸의 털이 바늘처럼 곤두서며 1만 볼트의 전격을 발사한다."],
+            [136,"부스터","Flareon",1,["불꽃"],"불꽃포켓몬","0.9","25.0",["타오르는불꽃","근성"],[65,130,60,95,110,65],[133,136],"체내에 불꽃 주머니를 가지고 있어 들이마신 공기를 1700도의 화염으로 바꾸어 내뿜는다."],
+            [137,"폴리곤","Porygon",1,["노말"],"가상포켓몬","0.8","36.5",["트레이스","다운로드"],[65,60,70,85,75,40],[137],"최첨단 과학 기술로 만들어진 인공 포켓몬. 전자 공간 속을 자유롭게 이동할 수 있다."],
+            [138,"암나이트","Omanyte",1,["바위","물"],"소용돌이포켓몬","0.4","7.5",["쓱쓱","조가비갑옷"],[35,40,100,90,55,35],[138,139],"먼 옛날 바다에 살았던 고대 포켓몬. 화석에서 복원되었으며 10개의 다리를 흔들어 헤엄친다."],
+            [139,"암스타","Omastar",1,["바위","물"],"소용돌이포켓몬","1.0","35.0",["쓱쓱","조가비갑옷"],[70,60,125,115,70,55],[138,139],"날카로운 이빨과 촉수로 먹이를 잡는다. 등껍질이 너무 크게 자라 무거워지면서 멸종했다고 한다."],
+            [140,"투구","Kabuto",1,["바위","물"],"껍질포켓몬","0.5","11.5",["쓱쓱","전투무장"],[30,80,90,55,45,55],[140,141],"3억 년 전 해저에서 살았던 포켓몬. 단단한 등껍질의 안쪽에도 빛나는 한 쌍의 눈이 있다."],
+            [141,"투구푸스","Kabutops",1,["바위","물"],"껍질포켓몬","1.3","40.5",["쓱쓱","전투무장"],[60,115,105,65,70,80],[140,141],"물속을 시속 50km로 헤엄치며 양팔의 날카로운 낫으로 사냥감을 베어 체액을 흡수한다."],
+            [142,"프테라","Aerodactyl",1,["바위","비행"],"화석포켓몬","1.8","59.0",["돌머리","프레셔"],[80,105,65,60,75,130],[142],"호박 속에 남은 공룡의 유전자에서 부활한 포켓몬. 톱날 같은 이빨로 먹이의 목을 노린다."],
+            [143,"잠만보","Snorlax",1,["노말"],"졸음포켓몬","2.1","460.0",["면역","두꺼운지방"],[160,110,65,65,110,30],[143],"하루에 400kg의 음식을 먹지 않으면 성이 차지 않는다. 식사가 끝나면 바로 깊은 잠에 빠진다."],
+            [144,"프리져","Articuno",1,["얼음","비행"],"냉동포켓몬","1.7","55.4",["프레셔","눈숨기"],[90,85,100,95,125,85],[144],"눈산에서 조난당해 얼어 죽기 직전의 사람 앞에 나타난다는 전설의 새포켓몬. 날갯짓으로 눈을 내리게 한다."],
+            [145,"썬더","Zapdos",1,["전기","비행"],"전기포켓몬","1.6","52.6",["프레셔","정전기"],[90,90,85,125,90,100],[145],"뇌운 속에서 나타나는 전설의 새포켓몬. 날개를 퍼덕일 때마다 강렬한 번개가 내리친다."],
+            [146,"파이어","Moltres",1,["불꽃","비행"],"화염포켓몬","2.0","60.0",["프레셔","불꽃몸"],[90,100,90,125,85,90],[146],"불타오르는 날개를 가진 전설의 새포켓몬. 파이어가 나타나면 봄이 일찍 찾아온다고 전해진다."],
+            [147,"미뇽","Dratini",1,["드래곤"],"드래곤포켓몬","1.8","3.3",["탈피","이상한비늘"],[41,64,45,50,50,50],[147,148,149],"환상의 포켓몬이라 불리며 오랫동안 목격되지 않았다. 탈피를 거듭하며 점점 크게 자라난다."],
+            [148,"신뇽","Dragonair",1,["드래곤"],"드래곤포켓몬","4.0","16.5",["탈피","이상한비늘"],[61,84,65,70,70,70],[147,148,149],"온몸에서 신비한 오라를 발산하여 주위의 날씨를 바꿀 수 있다. 수정 구슬이 아름답게 빛난다."],
+            [149,"망나뇽","Dragonite",1,["드래곤","비행"],"드래곤포켓몬","2.2","210.0",["정신력","멀티스케일"],[91,134,95,100,100,80],[147,148,149],"커다란 체격에도 지구를 약 16시간 만에 일주할 수 있는 비행 능력을 지닌 상냥한 바다의 화신."],
+            [150,"뮤츠","Mewtwo",1,["에스퍼"],"유전포켓몬","2.0","122.0",["프레셔","긴장감"],[106,110,90,154,90,130],[150],"뮤의 유전자를 재조합하여 탄생한 전설의 포켓몬. 압도적인 사이코 파워로 적을 제압한다."],
+            [151,"뮤","Mew",1,["에스퍼"],"신종포켓몬","0.4","4.0",["싱크로"],[100,100,100,100,100,100],[151],"모든 포켓몬의 유전자를 지니고 있어 모든 기술을 사용할 수 있다고 알려진 환상의 포켓몬."],
+
+            // === 2~4세대 성도·호연·신오 인기 대표 포켓몬 ===
+            [196,"에브이","Espeon",2,["에스퍼"],"태양포켓몬","0.9","26.5",["싱크로","매직미러"],[65,65,60,130,95,110],[133,196],"온몸의 고운 털로 공기의 흐름을 읽어 상대의 다음 행동이나 날씨의 변화를 정확히 예측한다."],
+            [197,"블래키","Umbreon",2,["악"],"달빛포켓몬","1.0","27.0",["싱크로","정신력"],[95,65,110,60,130,65],[133,197],"달빛의 파동을 받아 진화한 포켓몬. 어둠 속에 숨어 사냥감을 노릴 때 고리 무늬가 황금빛으로 빛난다."],
+            [212,"핫삼","Scizor",2,["벌레","강철"],"집게포켓몬","1.8","118.0",["벌레의알림","테크니션"],[70,130,100,55,80,65],[123,212],"강철의 단단함을 가진 몸은 어지간한 공격에는 흠집조차 나지 않는다. 거대한 집게로 상대를 위협한다."],
+            [248,"마기라스","Tyranitar",2,["바위","악"],"갑옷포켓몬","2.0","202.0",["모래날림","긴장감"],[100,134,110,95,100,61],[248],"한 번 날뛰기 시작하면 산이 무너지고 지형이 바뀔 정도의 어마어마한 힘을 발휘하는 갑옷포켓몬."],
+            [249,"루기아","Lugia",2,["에스퍼","비행"],"잠수포켓몬","5.2","216.0",["프레셔","멀티스케일"],[106,90,130,90,154,110],[249],"바다의 신이라 전해지는 전설의 포켓몬. 날개를 한 번 가볍게 퍼덕이는 것만으로 민가가 날아갈 폭풍을 일으킨다."],
+            [250,"칠색조","Ho-Oh",2,["불꽃","비행"],"무지개포켓몬","3.8","199.0",["프레셔","재생력"],[106,130,90,110,154,90],[250],"무지갯빛의 아름다운 날개를 가진 전설의 포켓몬. 칠색조의 깃털을 지닌 자에게는 영원한 행복이 찾아온다고 한다."],
+            [254,"나무킹","Sceptile",3,["풀"],"밀림포켓몬","1.7","52.2",["심록","곡예"],[70,85,65,105,85,120],[254],"팔에 돋아난 날카로운 잎사귀는 큰 나무도 단숨에 베어 넘긴다. 정글의 나무 위를 민첩하게 뛰어다닌다."],
+            [257,"번치코","Blaziken",3,["불꽃","격투"],"맹화포켓몬","1.9","52.0",["맹화","가속"],[80,120,70,110,70,80],[257],"강적과 마주치면 손목에서 맹렬한 불꽃이 뿜어져 나온다. 강인한 다리 힘으로 30층 빌딩도 뛰어넘는다."],
+            [260,"대짱이","Swampert",3,["물","땅"],"늪물고기포켓몬","1.5","81.9",["급류","습기"],[100,110,90,85,90,60],[260],"바위처럼 단단한 팔을 휘두르면 거대한 암석도 산산조각 난다. 지느러미로 폭풍의 전조를 감지한다."],
+            [282,"가디안","Gardevoir",3,["에스퍼","페어리"],"포용포켓몬","1.6","48.4",["싱크로","트레이스"],[68,65,65,125,115,80],[282],"트레이너를 지키기 위해서라면 사이코 파워를 최대로 발휘해 작은 블랙홀을 만들어낼 정도의 힘을 지녔다."],
+            [373,"보만다","Salamence",3,["드래곤","비행"],"드래곤포켓몬","1.5","102.6",["위협","자기과신"],[95,135,80,110,80,100],[373],"하늘을 날고 싶다는 오랜 염원이 세포를 변화시켜 마침내 거대한 진홍빛 날개를 손에 넣었다."],
+            [376,"메타그로스","Metagross",3,["강철","에스퍼"],"무쇠다리포켓몬","1.6","550.0",["클리어바디","라이트메탈"],[80,135,130,95,90,70],[376],"4개의 두뇌가 신경 네트워크로 연결되어 슈퍼컴퓨터보다 뛰어난 연산 속도를 자랑한다."],
+            [384,"레쿠쟈","Rayquaza",3,["드래곤","비행"],"천공포켓몬","7.0","206.5",["에어록"],[105,150,90,150,90,95],[384],"수억 년 동안 오존층 속에서 살아온 전설의 포켓몬. 대기 중의 물과 먼지를 에너지원으로 삼는다."],
+            [445,"한카리아스","Garchomp",4,["드래곤","땅"],"마하포켓몬","1.9","95.0",["모래숨기","까칠한피부"],[108,130,95,80,85,102],[445],"몸을 접고 날개를 펴면 제트기 같은 모습이 되어 음속으로 하늘을 가르며 날카로운 칼날로 베어낸다."],
+            [448,"루카리오","Lucario",4,["격투","강철"],"파동포켓몬","1.2","54.0",["불굴의마음","정신력"],[70,110,70,115,70,90],[448],"모든 생명체가 발하는 파동을 감지하여 1km 앞에 있는 상대의 움직임과 감정까지 읽어낼 수 있다."],
+            [468,"토게키스","Togekiss",4,["페어리","비행"],"축복포켓몬","1.5","38.0",["의욕","하늘의은총"],[85,50,95,120,115,80],[468],"다툼이 없는 평화로운 곳을 찾아 모습을 드러내며 여러 가지 은혜와 축복을 나누어 준다고 전해진다."],
+            [470,"리피아","Leafeon",4,["풀"],"심록포켓몬","1.0","25.5",["리프가드","엽록소"],[65,110,130,60,65,95],[133,470],"식물처럼 광합성을 하기 때문에 리피아 주변에는 항상 맑고 깨끗한 공기가 감돈다."],
+            [471,"글레이시아","Glaceon",4,["얼음"],"신설포켓몬","0.8","25.9",["눈숨기","아이스바디"],[65,60,110,130,95,65],[133,471],"체온을 자유자재로 조절해 주위의 공기를 얼려 아름다운 다이아몬드 더스트를 일으킨다."],
+            [487,"기라티나","Giratina",4,["고스트","드래곤"],"반골포켓몬","4.5","750.0",["프레셔","텔레파시"],[150,100,120,100,120,90],[487],"난폭함 때문에 쫓겨나 이 세계의 뒤편에 있는 깨어진 세계에서 조용히 원래의 세계를 바라보고 있다."],
+            [491,"다크라이","Darkrai",4,["악"],"암흑포켓몬","1.5","50.5",["나이트메어"],[70,90,90,135,90,125],[491],"그믐달이 뜨는 밤에 활동하며 주위의 사람과 포켓몬을 깊은 잠에 빠뜨려 악몽을 꾸게 만드는 능력을 지녔다."],
+            [493,"아르세우스","Arceus",4,["노말"],"창조포켓몬","3.2","320.0",["멀티타입"],[120,120,120,120,120,120],[493],"아무것도 없던 혼돈 속에서 알로 태어나 1000개의 팔로 이 세계를 창조했다고 신화에 전해지는 포켓몬."],
+
+            // === 5~9세대 하나·칼로스·알로라·가라르·팔데아 인기 대표 포켓몬 ===
+            [571,"조로아크","Zoroark",5,["악"],"요괴여우포켓몬","1.6","81.1",["일루전"],[60,105,60,120,60,105],[571],"수백 명의 사람들을 한꺼번에 속일 정도의 환상을 만들어내어 자신의 보금자리와 무리를 지킨다."],
+            [635,"삼삼드래","Hydreigon",5,["악","드래곤"],"흉폭포켓몬","1.8","160.0",["부유"],[92,105,90,125,90,98],[635],"3개의 머리가 번갈아 가며 모든 것을 먹어 치우려 하는 파괴의 화신. 움직이는 것은 모두 적으로 간주한다."],
+            [658,"개굴닌자","Greninja",6,["물","악"],"시노비포켓몬","1.5","40.0",["급류","변환자재"],[72,95,67,103,71,122],[658],"닌자처럼 신출귀몰하게 움직이며 상대를 농락한다. 물을 압축해 만든 물수리검은 금속도 두 동강 낸다."],
+            [700,"님피아","Sylveon",6,["페어리"],"연결포켓몬","1.0","23.5",["헤롱헤롱바디","페어리스킨"],[95,65,65,110,130,60],[133,700],"리본 모양의 더듬이에서 적의를 없애는 신비한 파동을 내보내며 좋아하는 트레이너의 팔에 리본을 감는다."],
+            [706,"미끄래곤","Goodra",6,["드래곤"],"드래곤포켓몬","2.0","150.5",["초식","촉촉바디"],[90,100,70,110,150,80],[706],"매우 온순하고 사람을 잘 따른다. 좋아하는 트레이너에게 달려들어 끈적끈적한 점액투성이로 만들어 버린다."],
+            [778,"따라큐","Mimikyu",7,["고스트","페어리"],"탈포켓몬","0.2","0.7",["탈"],[55,90,80,50,105,96],[778],"인간과 친해지고 싶어서 피카츄와 닮은 천을 뒤집어쓰고 있다. 천 안쪽의 정체를 보면 알 수 없는 병에 걸린다."],
+            [887,"드래펄트","Dragapult",8,["드래곤","고스트"],"스텔스포켓몬","3.0","50.0",["클리어바디","틈새포착"],[88,120,75,100,75,142],[887],"뿔 속에 드라꼰을 태우고 마하의 속도로 날아다닌다. 싸움이 시작되면 뿔에서 드라꼰을 미사일처럼 발사한다."],
+            [888,"자시안","Zacian",8,["페어리"],"강자포켓몬","2.8","110.0",["불굴의검"],[92,130,115,80,115,138],[888],"페어리 왕이라 불리는 전설의 포켓몬. 어떤 상대든 단칼에 베어 넘기는 화려한 검술로 모두를 매료시킨다."],
+            [1007,"코라이돈","Koraidon",9,["격투","드래곤"],"패러독스포켓몬","2.5","303.0",["진홍빛고동"],[100,135,115,85,100,135],[1007],"고대의 '날개왕'이라 불리는 전설의 포켓몬. 주먹 한 방으로 대지를 가를 정도의 압도적인 완력을 자랑한다."],
+            [1008,"미라이돈","Mirai-don",9,["전기","드래곤"],"패러독스포켓몬","3.5","240.0",["하드론엔진"],[100,85,100,135,115,135],[1008],"미래의 '무쇠뱀'이라 불리는 전설의 포켓몬. 꼬리와 목에서 방출하는 에너지로 공중을 부유하며 번개를 쏜다."]
+        ];
+
+        /**
+         * 메가진화 26종 데이터 (PokeAPI 공식 아트워크 ID 10033+ 매핑)
+         * 형식: [spriteId, baseDexId, ko, en, stone, typesKo, height, weight, ability, stats[H,A,B,C,D,S], desc]
+         */
+        const RAW_MEGA_POKEMON = [
+            [10033, 3, "메가이상해꽃", "Mega Venusaur", "이상해꽃나이트", ["풀","독"], "2.4", "155.5", "두꺼운지방", [80,100,123,122,120,80], "메가진화의 에너지로 등의 꽃이 더욱 거대해졌다. 두꺼운 지방 특성으로 약점인 불꽃과 얼음 공격을 반감시킨다."],
+            [10034, 6, "메가리자몽X", "Mega Charizard X", "리자몽나이트X", ["불꽃","드래곤"], "1.7", "110.5", "단단한발톱", [78,130,111,130,85,100], "검은 몸체와 푸른 불꽃을 두른 드래곤 타입으로 각성했다. 넘치는 파워로 입가에서 푸른 화염이 뿜어져 나온다."],
+            [10035, 6, "메가리자몽Y", "Mega Charizard Y", "리자몽나이트Y", ["불꽃","비행"], "1.7", "100.5", "가뭄", [78,104,78,159,115,100], "날카롭게 발달한 날개로 제트기보다 빠르게 비행한다. 가뭄 특성으로 햇살을 강하게 만들어 화염 위력을 극대화한다."],
+            [10036, 9, "메가거북왕", "Mega Blastoise", "거북왕나이트", ["물"], "1.6", "101.1", "메가런처", [79,103,120,135,115,78], "등껍질에 거대한 주포가 하나로 통합되었다. 10km 떨어진 표적도 정확히 꿰뚫는 파동탄과 물대포를 쏜다."],
+            [10090, 15, "메가독침붕", "Mega Beedrill", "독침붕나이트", ["벌레","독"], "1.4", "40.5", "적응력", [65,150,40,15,80,145], "양팔과 다리, 엉덩이까지 총 5개의 거대한 독침을 갖추었다. 눈으로 쫓을 수 없는 초고속으로 날아다니며 찌른다."],
+            [10073, 18, "메가피죤투", "Mega Pidgeot", "피죤투나이트", ["노말","비행"], "2.2", "50.5", "노가드", [83,80,80,135,80,121], "전신의 근육이 강화되어 2주 동안 쉬지 않고 하늘을 날 수 있다. 거대한 벼슬과 날개로 폭풍을 일으킨다."],
+            [10037, 65, "메가후딘", "Mega Alakazam", "후딘나이트", ["에스퍼"], "1.2", "48.0", "트레이스", [55,50,65,175,105,150], "모든 근육의 힘을 사이코 파워로 전환하여 공중에 가부좌를 튼 채 부유한다. 5개의 숟가락을 염력으로 조종한다."],
+            [10071, 80, "메가야도란", "Mega Slowbro", "야도란나이트", ["물","에스퍼"], "2.0", "120.0", "조가비갑옷", [95,75,180,130,80,30], "메가진화 에너지가 꼬리에 물린 셀러에게 집중되어 거대한 갑옷이 되었다. 꼬리로 용수철처럼 튕기며 이동한다."],
+            [10038, 94, "메가팬텀", "Mega Gengar", "팬텀나이트", ["고스트","독"], "1.4", "40.5", "그림자밟기", [60,65,80,170,95,130], "하반신이 이차원의 그림자 속에 잠겨 있다. 이마의 제3의 눈이 열리며 다른 차원의 세계를 꿰뚫어 본다."],
+            [10039, 115, "메가캥카", "Mega Kangaskhan", "캥카나이트", ["노말"], "2.2", "100.0", "부자유친", [105,125,100,60,100,100], "주머니 속에서 자란 새끼가 밖으로 나와 어미와 완벽한 호흡으로 함께 공격하는 부자유친의 힘을 발휘한다."],
+            [10040, 127, "메가쁘사이저", "Mega Pinsir", "쁘사이저나이트", ["벌레","비행"], "1.7", "59.0", "스카이스킨", [65,155,120,65,90,105], "커다란 날개가 돋아나 시속 50km로 저공비행을 하며 거대한 뿔로 상대를 꿰뚫는 호전적인 포켓몬이 되었다."],
+            [10041, 130, "메가갸라도스", "Mega Gyarados", "갸라도스나이트", ["물","악"], "6.5", "305.0", "틀깨기", [95,155,109,70,130,81], "메가진화의 영향으로 파괴 본능만 남았다. 옆구리의 분사구에서 물을 뿜어 음속으로 바다를 가른다."],
+            [10042, 142, "메가프테라", "Mega Aerodactyl", "프테라나이트", ["바위","비행"], "2.1", "79.0", "단단한발톱", [80,135,85,70,95,150], "잠들어 있던 고대의 유전자가 깨어나 온몸에 날카로운 바위 가시가 돋아났다. 진정한 고대 제왕의 모습이다."],
+            [10043, 150, "메가뮤츠X", "Mega Mewtwo X", "뮤츠나이트X", ["에스퍼","격투"], "2.3", "127.0", "불굴의마음", [106,190,100,154,100,130], "사이코 파워로 근육을 극한까지 증강시켰다. 악력과 펀치 한 방으로 고층 빌딩도 단숨에 무너뜨리는 격투의 화신."],
+            [10044, 150, "메가뮤츠Y", "Mega Mewtwo Y", "뮤츠나이트Y", ["에스퍼"], "1.5", "33.0", "불면", [106,150,70,194,120,140], "몸집은 작아졌지만 뇌와 정신력이 한계를 돌파했다. 생각만으로 빌딩을 가루로 만들어 버리는 압도적 초능력자."],
+            [10046, 212, "메가핫삼", "Mega Scizor", "핫삼나이트", ["벌레","강철"], "2.0", "125.0", "테크니션", [70,150,140,65,100,75], "집게가 톱날처럼 거대하게 변해 무엇이든 갈아버린다. 다만 너무 많은 에너지를 쓰면 몸이 녹아내리기 시작한다."],
+            [10049, 248, "메가마기라스", "Mega Tyranitar", "마기라스나이트", ["바위","악"], "2.5", "255.0", "모래날림", [100,164,150,95,120,71], "등이 갈라지며 붉은 에너지가 분출된다. 파괴 본능만으로 움직이며 강물과 산맥의 지형마저 바꾸어 버린다."],
+            [10065, 254, "메가나무킹", "Mega Sceptile", "나무킹나이트", ["풀","드래곤"], "1.9", "55.2", "피뢰침", [70,110,75,145,85,145], "드래곤의 힘이 깨어나 꼬리가 거대한 잎사귀 포탄처럼 변했다. 자신의 꼬리를 미사일처럼 발사해 적을 공격한다."],
+            [10050, 257, "메가번치코", "Mega Blaziken", "번치코나이트", ["불꽃","격투"], "1.9", "52.0", "가속", [80,160,80,130,80,100], "발차기의 예리함이 극대화되어 공기를 가를 때 불꽃이 휘감긴다. 체온이 올라갈수록 스피드와 파워가 폭발한다."],
+            [10064, 260, "메가대짱이", "Mega Swampert", "대짱이나이트", ["물","땅"], "1.9", "102.0", "쓱쓱", [100,150,110,95,110,70], "상반신의 근육이 어마어마하게 발달했다. 수중에서 헤엄칠 때 필요한 근육이 단련되어 폭풍우 속에서도 자유자재다."],
+            [10051, 282, "메가가디안", "Mega Gardevoir", "가디안나이트", ["에스퍼","페어리"], "1.6", "48.4", "페어리스킨", [68,85,65,165,135,100], "마음이 열리며 사이코 파워가 실체화되어 순백의 드레스처럼 펼쳐졌다. 가슴의 붉은 뿔은 마음의 에너지원이다."],
+            [10089, 373, "메가보만다", "Mega Salamence", "보만다나이트", ["드래곤","비행"], "1.8", "112.6", "스카이스킨", [95,145,130,120,90,120], "두 날개가 하나로 합쳐져 거대한 초승달 모양이 되었다. 음속으로 비행하며 앞을 가로막는 모든 것을 두 동강 낸다."],
+            [10076, 376, "메가메타그로스", "Mega Metagross", "메타그로스나이트", ["강철","에스퍼"], "2.5", "942.9", "단단한발톱", [80,145,150,105,110,110], "메타그로스, 메타코그, 메탕 2마리가 합체한 형태. 8개의 뇌로 냉철하게 승리를 계산하며 거대한 발톱으로 찢는다."],
+            [10079, 384, "메가레쿠쟈", "Mega Rayquaza", "화룡점정 (메가스톤 불필요)", ["드래곤","비행"], "10.8", "392.0", "델타스트림", [105,180,100,180,100,115], "인류의 염원과 운석의 에너지가 공명하여 메가스톤 없이도 메가진화를 이룬 초월적 존재. 난기류로 모든 날씨를 지배한다."],
+            [10058, 445, "메가한카리아스", "Mega Garchomp", "한카리아스나이트", ["드래곤","땅"], "1.9", "95.0", "모래의힘", [108,170,115,120,95,92], "과잉 에너지로 양팔과 무릎이 거대한 낫으로 변했다. 분노에 휩싸여 대지를 갈라버릴 정도로 낫을 휘두른다."],
+            [10059, 448, "메가루카리오", "Mega Lucario", "루카리오나이트", ["격투","강철"], "1.3", "57.5", "적응력", [70,145,88,140,70,112], "파동의 에너지가 전신을 휘감아 검은 문양이 새겨졌다. 투쟁 본능이 깨어나 자비 없는 정교한 연격으로 적을 제압한다."]
+        ];
+
+        // 오타 교정 및 구조화된 객체 배열로 변환 (일반 181종)
+        const BASE_POKEMON_DATA = RAW_POKEMON.map(row => {
+            const [id, nameKo, rawEn, gen, typesKo, category, height, weight, abilities, statsArr, evoIds, description] = row;
+            const nameEn = rawEn === "Mirai-don" ? "Miraidon" : rawEn;
+            return {
+                id,
+                spriteId: id,
+                baseId: id,
+                isMega: false,
+                megaLabel: '일반 모습',
+                megaStone: null,
+                nameKo,
+                nameEn,
+                gen,
+                types: typesKo.map(t => KO_TO_TYPE_KEY[t] || 'normal'),
+                category,
+                height: `${height} m`,
+                weight: `${weight} kg`,
+                abilities,
+                description,
+                stats: {
+                    hp: statsArr[0],
+                    atk: statsArr[1],
+                    def: statsArr[2],
+                    spa: statsArr[3],
+                    spd: statsArr[4],
+                    spe: statsArr[5]
+                },
+                evoIds
+            };
+        });
+
+        const BASE_BY_ID = new Map(BASE_POKEMON_DATA.map(p => [p.id, p]));
+
+        // 메가진화 26종 객체 배열 변환
+        const MEGA_POKEMON_DATA = RAW_MEGA_POKEMON.map(row => {
+            const [spriteId, baseDexId, nameKo, nameEn, megaStone, typesKo, height, weight, ability, statsArr, description] = row;
+            const basePoke = BASE_BY_ID.get(baseDexId);
+            const megaLabel = nameKo.endsWith('X') ? '메가진화 X' : (nameKo.endsWith('Y') ? '메가진화 Y' : '메가진화');
+            return {
+                id: spriteId,
+                spriteId,
+                baseId: baseDexId,
+                isMega: true,
+                megaLabel,
+                megaStone,
+                nameKo,
+                nameEn,
+                gen: basePoke ? basePoke.gen : 1,
+                types: typesKo.map(t => KO_TO_TYPE_KEY[t] || 'normal'),
+                category: basePoke ? basePoke.category : '메가진화포켓몬',
+                height: `${height} m`,
+                weight: `${weight} kg`,
+                abilities: [ability],
+                description,
+                stats: {
+                    hp: statsArr[0],
+                    atk: statsArr[1],
+                    def: statsArr[2],
+                    spa: statsArr[3],
+                    spd: statsArr[4],
+                    spe: statsArr[5]
+                },
+                evoIds: basePoke ? basePoke.evoIds : [baseDexId]
+            };
+        });
+
+        // 기본 포켓몬 ID -> 연결된 메가진화 폼 목록 매핑 (예: 6 -> [메가리자몽X, 메가리자몽Y])
+        const MEGA_FORMS_BY_BASE_ID = new Map();
+        MEGA_POKEMON_DATA.forEach(mega => {
+            if (!MEGA_FORMS_BY_BASE_ID.has(mega.baseId)) {
+                MEGA_FORMS_BY_BASE_ID.set(mega.baseId, []);
+            }
+            MEGA_FORMS_BY_BASE_ID.get(mega.baseId).push(mega);
+        });
+
+        // 전체 도감 통합 배열 (기본 181종 + 메가진화 26종 = 207종, 도감번호 순 정렬)
+        const POKEMON_DATA = [...BASE_POKEMON_DATA, ...MEGA_POKEMON_DATA].sort((a, b) => {
+            if (a.baseId !== b.baseId) return a.baseId - b.baseId;
+            return a.id - b.id;
+        });
+
+        // 빠른 ID 조회를 위한 맵 생성 (일반 id 및 메가 spriteId 모두 포함)
+        const POKEMON_BY_ID = new Map(POKEMON_DATA.map(p => [p.id, p]));
+
+        /**
+         * 3. 애플리케이션 상태 관리
+         */
+        let currentGenFilter = 'all';
+        let currentTypeFilter = 'all';
+        let currentSearchQuery = '';
+        let currentSort = 'id-asc';
+        let filteredPokemonList = [...POKEMON_DATA];
+        let visibleLimit = 48; // 초기 부드러운 렌더링 단위
+        let currentModalPokemonId = null;
+        let isModalShiny = false;
+
+        /**
+         * 4. 유틸리티 함수
+         */
+        const formatDexNumber = (baseId, isMega = false) => {
+            const numStr = `No. ${String(baseId).padStart(4, '0')}`;
+            return isMega ? `${numStr} · MEGA` : numStr;
+        };
+        const getStatTotal = (stats) => Object.values(stats).reduce((sum, val) => sum + val, 0);
+
+        /**
+         * 5. 세대 및 타입 필터 버튼 렌더링
+         */
+        function renderGenFilters() {
+            const buttons = document.querySelectorAll('.gen-btn');
+            buttons.forEach(btn => {
+                const key = btn.dataset.gen;
+                const isSelected = key === currentGenFilter;
+                if (key === 'mega') {
+                    btn.className = isSelected
+                        ? 'gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white ring-2 ring-offset-1 ring-purple-600 shadow-sm transition-all cursor-pointer'
+                        : 'gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-extrabold bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-pink-500/15 text-purple-700 hover:from-indigo-500/25 hover:to-pink-500/25 border border-purple-200 transition-all cursor-pointer';
+                } else if (isSelected) {
+                    btn.className = 'gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-xs transition-all cursor-pointer';
+                } else {
+                    btn.className = 'gen-btn shrink-0 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer';
+                }
+            });
+        }
+
+        function renderTypeFilters() {
+            const container = document.getElementById('typeFilterContainer');
+            const types = Object.keys(TYPE_CONFIG);
+
+            container.innerHTML = types.map(typeKey => {
+                const config = TYPE_CONFIG[typeKey];
+                const isSelected = currentTypeFilter === typeKey;
+                const activeClasses = isSelected 
+                    ? `${config.bg} ${config.text} ring-2 ring-offset-1 ring-slate-800 shadow-md scale-105` 
+                    : `bg-slate-100 text-slate-600 hover:bg-slate-200/80`;
+
+                return `
+                    <button 
+                        onclick="selectTypeFilter('${typeKey}')"
+                        class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-150 cursor-pointer ${activeClasses}"
+                    >
+                        ${config.ko}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        /**
+         * 6. 포켓몬 카드 그리드 렌더링 (청크/더 보기 지원)
+         */
+        function renderPokedexGrid() {
+            const grid = document.getElementById('pokedexGrid');
+            const emptyState = document.getElementById('emptyState');
+            const paginationControls = document.getElementById('paginationControls');
+            const remainingCountBadge = document.getElementById('remainingCountBadge');
+            const desktopCount = document.getElementById('desktopCount');
+            const mobileCount = document.getElementById('mobileCount');
+            const totalDexCount = document.getElementById('totalDexCount');
+
+            desktopCount.textContent = filteredPokemonList.length;
+            mobileCount.textContent = filteredPokemonList.length;
+            if (totalDexCount) totalDexCount.textContent = POKEMON_DATA.length;
+
+            if (filteredPokemonList.length === 0) {
+                grid.innerHTML = '';
+                paginationControls.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            const sliceToRender = filteredPokemonList.slice(0, visibleLimit);
+            const remaining = filteredPokemonList.length - sliceToRender.length;
+
+            if (remaining > 0) {
+                paginationControls.classList.remove('hidden');
+                paginationControls.classList.add('flex');
+                remainingCountBadge.textContent = `(남은 ${remaining}종)`;
+            } else {
+                paginationControls.classList.add('hidden');
+                paginationControls.classList.remove('flex');
+            }
+
+            grid.innerHTML = sliceToRender.map(pokemon => {
+                const primaryType = pokemon.types[0];
+                const theme = TYPE_CONFIG[primaryType] || TYPE_CONFIG.normal;
+                const statTotal = getStatTotal(pokemon.stats);
+                const hasMega = !pokemon.isMega && MEGA_FORMS_BY_BASE_ID.has(pokemon.baseId);
+
+                const typeBadgesHtml = pokemon.types.map(t => {
+                    const tConf = TYPE_CONFIG[t];
+                    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide shadow-sm ${tConf.badge} ${tConf.text.includes('slate-900') ? '' : 'text-white'}">${tConf.ko}</span>`;
+                }).join('');
+
+                const megaBadgeHtml = pokemon.isMega
+                    ? `<span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white shadow-xs">🧬 MEGA</span>`
+                    : (hasMega ? `<span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-700 border border-purple-200" title="메가진화 가능">🧬 메가가능</span>` : '');
+
+                const cardRingClass = pokemon.isMega
+                    ? 'border-purple-300/90 ring-1 ring-purple-200/60'
+                    : 'border-slate-200/80';
+
+                return `
+                    <article 
+                        onclick="openPokemonModal(${pokemon.id})"
+                        class="group relative bg-white rounded-3xl border ${cardRingClass} shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
+                    >
+                        <!-- 카드 상단 일러스트 영역 -->
+                        <div class="relative h-44 bg-gradient-to-br ${theme.cardBg} p-4 flex items-center justify-center overflow-hidden">
+                            <!-- 배경 몬스터볼 워터마크 -->
+                            <svg class="absolute -right-6 -bottom-6 w-36 h-36 text-white/60 transition-transform duration-500 group-hover:rotate-45 group-hover:scale-110" viewBox="0 0 100 100" fill="currentColor">
+                                <path d="M50 5a45 45 0 0 1 44.7 40H69.3a20 20 0 0 0-38.6 0H5.3A45 45 0 0 1 50 5zm0 90a45 45 0 0 1-44.7-40h25.4a20 20 0 0 0 38.6 0h25.4A45 45 0 0 1 50 95zm0-33a12 12 0 1 1 0-24 12 12 0 0 1 0 24z"/>
+                            </svg>
+
+                            <!-- 도감 번호 & 총합 배지 -->
+                            <div class="absolute top-3.5 left-4 right-4 flex items-center justify-between gap-1 z-10">
+                                <span class="font-mono text-xs font-extrabold text-slate-600/90 bg-white/80 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-xs">
+                                    No. ${String(pokemon.baseId).padStart(4, '0')}
+                                </span>
+                                <div class="flex items-center gap-1">
+                                    ${megaBadgeHtml}
+                                    <span class="text-[11px] font-bold text-slate-600 bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded-lg" title="종족값 총합">
+                                        ${statTotal}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 공식 아트워크 이미지 -->
+                            <img 
+                                src="${getArtworkUrl(pokemon.spriteId, false)}" 
+                                alt="${pokemon.nameKo}" 
+                                loading="lazy"
+                                onerror="this.onerror=null; this.src='https://placehold.co/200x200/e2e8f0/475569?text=${encodeURIComponent(pokemon.nameKo)}';"
+                                class="relative z-10 w-32 h-32 object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-110 mt-3"
+                            >
+                        </div>
+
+                        <!-- 카드 하단 정보 영역 -->
+                        <div class="p-5 flex-1 flex flex-col justify-between bg-white">
+                            <div>
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <h2 class="text-lg font-black text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                                        ${pokemon.nameKo}
+                                    </h2>
+                                    <span class="text-xs font-semibold text-slate-400 truncate shrink-0 max-w-[45%]">${pokemon.nameEn}</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5 mb-3 truncate">
+                                    ${pokemon.isMega ? `✨ ${pokemon.megaStone}` : `${pokemon.gen}세대 · ${pokemon.category}`}
+                                </p>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                                <div class="flex items-center gap-1.5">
+                                    ${typeBadgesHtml}
+                                </div>
+                                <span class="text-xs font-bold text-slate-400 group-hover:text-slate-800 flex items-center gap-0.5 transition-colors">
+                                    상세보기
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function loadMoreCards(step = 48) {
+            visibleLimit += step;
+            renderPokedexGrid();
+        }
+
+        function loadAllCards() {
+            visibleLimit = filteredPokemonList.length;
+            renderPokedexGrid();
+        }
+
+        /**
+         * 7. 검색, 세대/속성 필터 및 정렬 적용 로직
+         */
+        function applyFilters(resetLimit = true) {
+            const query = currentSearchQuery.trim().toLowerCase();
+            currentSort = document.getElementById('sortSelect').value;
+            if (resetLimit) visibleLimit = 48;
+
+            // 1) 필터링
+            filteredPokemonList = POKEMON_DATA.filter(pokemon => {
+                // 세대 및 메가진화 필터 검사
+                if (currentGenFilter === 'mega' && !pokemon.isMega) return false;
+                if (currentGenFilter === '1' && (pokemon.isMega || pokemon.gen !== 1)) return false;
+                if (currentGenFilter === '2-4' && (pokemon.isMega || pokemon.gen < 2 || pokemon.gen > 4)) return false;
+                if (currentGenFilter === '5-9' && (pokemon.isMega || pokemon.gen < 5 || pokemon.gen > 9)) return false;
+
+                // 타입 필터 검사
+                const matchesType = currentTypeFilter === 'all' || pokemon.types.includes(currentTypeFilter);
+                if (!matchesType) return false;
+
+                // 검색어 검사 (한국어 이름, 영어 이름, 도감 번호, 메가스톤)
+                if (!query) return true;
+                const paddedId = String(pokemon.baseId).padStart(4, '0');
+                const plainId = String(pokemon.baseId);
+                const stoneMatch = pokemon.megaStone ? pokemon.megaStone.toLowerCase().includes(query) : false;
+                return (
+                    pokemon.nameKo.toLowerCase().includes(query) ||
+                    pokemon.nameEn.toLowerCase().includes(query) ||
+                    paddedId.includes(query) ||
+                    plainId === query ||
+                    stoneMatch
+                );
+            });
+
+            // 2) 정렬
+            filteredPokemonList.sort((a, b) => {
+                if (currentSort === 'id-asc') {
+                    if (a.baseId !== b.baseId) return a.baseId - b.baseId;
+                    return a.id - b.id;
+                }
+                if (currentSort === 'id-desc') {
+                    if (a.baseId !== b.baseId) return b.baseId - a.baseId;
+                    return b.id - a.id;
+                }
+                if (currentSort === 'stat-desc') return getStatTotal(b.stats) - getStatTotal(a.stats);
+                if (currentSort === 'name-asc') return a.nameKo.localeCompare(b.nameKo, 'ko');
+                return 0;
+            });
+
+            // 모바일 라벨 업데이트
+            const activeLabel = document.getElementById('activeFilterLabel');
+            if (activeLabel) {
+                const genText = currentGenFilter === 'all'
+                    ? '전체 도감'
+                    : (currentGenFilter === 'mega' ? '✨ 메가진화' : (currentGenFilter === '1' ? '1세대' : `${currentGenFilter}세대`));
+                const typeText = currentTypeFilter === 'all' ? '전체 속성' : `${TYPE_CONFIG[currentTypeFilter].ko} 속성`;
+                activeLabel.textContent = `${genText} · ${typeText}`;
+            }
+
+            renderPokedexGrid();
+        }
+
+        function selectGenFilter(genKey) {
+            currentGenFilter = genKey;
+            renderGenFilters();
+            applyFilters(true);
+        }
+
+        function selectTypeFilter(typeKey) {
+            currentTypeFilter = typeKey;
+            renderTypeFilters();
+            applyFilters(true);
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            currentSearchQuery = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            applyFilters(true);
+        }
+
+        function resetFilters() {
+            currentGenFilter = 'all';
+            currentTypeFilter = 'all';
+            clearSearch();
+            document.getElementById('sortSelect').value = 'id-asc';
+            document.getElementById('mobileSortSelect').value = 'id-asc';
+            renderGenFilters();
+            renderTypeFilters();
+            applyFilters(true);
+        }
+
+        function syncSort(val) {
+            document.getElementById('sortSelect').value = val;
+            applyFilters(true);
+        }
+
+        /**
+         * 8. 상세 정보 모달 열기, 이로치 전환 및 자동 상성 계산 바인딩
+         */
+        function updateModalArtwork() {
+            if (!currentModalPokemonId) return;
+            const pokemon = POKEMON_BY_ID.get(currentModalPokemonId);
+            if (!pokemon) return;
+
+            const imgEl = document.getElementById('modalImage');
+            const shinyBtn = document.getElementById('shinyToggleBtn');
+            const shinyText = document.getElementById('shinyBtnText');
+            const shinyAura = document.getElementById('shinyAura');
+            const megaAura = document.getElementById('megaAura');
+
+            imgEl.src = getArtworkUrl(pokemon.spriteId, isModalShiny);
+            imgEl.onerror = function() {
+                this.onerror = null;
+                this.src = getArtworkUrl(pokemon.spriteId, false);
+            };
+
+            if (pokemon.isMega) {
+                megaAura.classList.remove('hidden');
+            } else {
+                megaAura.classList.add('hidden');
+            }
+
+            if (isModalShiny) {
+                shinyBtn.classList.remove('bg-black/20', 'text-white');
+                shinyBtn.classList.add('bg-amber-300', 'text-slate-900', 'shadow-md');
+                shinyText.textContent = '이로치 ON';
+                shinyAura.classList.remove('hidden');
+            } else {
+                shinyBtn.classList.add('bg-black/20', 'text-white');
+                shinyBtn.classList.remove('bg-amber-300', 'text-slate-900', 'shadow-md');
+                shinyText.textContent = '이로치';
+                shinyAura.classList.add('hidden');
+            }
+        }
+
+        function toggleShiny() {
+            isModalShiny = !isModalShiny;
+            updateModalArtwork();
+        }
+
+        function openPokemonModal(id, preserveShiny = false) {
+            const pokemon = POKEMON_BY_ID.get(id);
+            if (!pokemon) return;
+
+            const isFormSwitch = preserveShiny && currentModalPokemonId !== null;
+            currentModalPokemonId = id;
+            if (!preserveShiny) {
+                isModalShiny = false;
+            }
+
+            const primaryType = pokemon.types[0];
+            const theme = TYPE_CONFIG[primaryType] || TYPE_CONFIG.normal;
+
+            // 헤더 배경 및 기본 정보
+            const headerBg = document.getElementById('modalHeaderBg');
+            headerBg.className = `relative pt-6 pb-16 px-6 sm:px-8 text-white overflow-hidden transition-colors ${theme.header}`;
+
+            document.getElementById('modalDexNum').textContent = formatDexNumber(pokemon.baseId, pokemon.isMega);
+            document.getElementById('modalGenBadge').textContent = pokemon.isMega ? `✨ ${pokemon.megaLabel}` : `${pokemon.gen}세대`;
+            document.getElementById('modalNameKo').textContent = pokemon.nameKo;
+            document.getElementById('modalNameEn').textContent = `${pokemon.nameEn} · ${pokemon.category}`;
+
+            // 속성 배지
+            document.getElementById('modalTypes').innerHTML = pokemon.types.map(t => {
+                const tConf = TYPE_CONFIG[t];
+                return `<span class="px-3.5 py-1 rounded-full text-xs font-extrabold bg-white/25 backdrop-blur-md text-white border border-white/30 shadow-sm">${tConf.ko} 타입</span>`;
+            }).join('');
+
+            // 아트워크 이미지 및 전환 애니메이션
+            const imgEl = document.getElementById('modalImage');
+            if (isFormSwitch) {
+                imgEl.classList.add('scale-110');
+                setTimeout(() => imgEl.classList.remove('scale-110'), 260);
+            }
+            updateModalArtwork();
+
+            // 메가진화 폼 전환 스위처 바 렌더링
+            const megaSwitcher = document.getElementById('modalMegaSwitcher');
+            const megaButtons = document.getElementById('modalMegaButtons');
+            const megaStoneBadge = document.getElementById('modalMegaStoneBadge');
+            const megaForms = MEGA_FORMS_BY_BASE_ID.get(pokemon.baseId) || [];
+
+            if (megaForms.length > 0) {
+                const baseForm = BASE_BY_ID.get(pokemon.baseId);
+                const allForms = [baseForm, ...megaForms].filter(Boolean);
+                megaSwitcher.classList.remove('hidden');
+                megaStoneBadge.textContent = pokemon.isMega
+                    ? `필요 도구: ${pokemon.megaStone}`
+                    : `메가스톤 보유 시 진화 가능`;
+
+                megaButtons.innerHTML = allForms.map(form => {
+                    const isActive = form.id === pokemon.id;
+                    const btnClass = isActive
+                        ? 'bg-gradient-to-r from-amber-300 via-pink-300 to-cyan-300 text-slate-950 font-black shadow-md scale-[1.03]'
+                        : 'bg-white/10 hover:bg-white/20 text-white/90 font-bold border border-white/15';
+                    const icon = form.isMega ? '🧬 ' : '';
+                    return `
+                        <button
+                            onclick="openPokemonModal(${form.id}, true)"
+                            class="px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${btnClass}"
+                        >
+                            ${icon}${form.nameKo}
+                        </button>
+                    `;
+                }).join('');
+            } else {
+                megaSwitcher.classList.add('hidden');
+            }
+
+            // 설명, 신체정보, 특성
+            document.getElementById('modalDescription').textContent = pokemon.description;
+            document.getElementById('modalHeight').textContent = pokemon.height;
+            document.getElementById('modalWeight').textContent = pokemon.weight;
+            document.getElementById('modalAbilities').innerHTML = pokemon.abilities.map(ab => 
+                `<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">${ab}</span>`
+            ).join('');
+            // 클릭 가능한 진화 계통 렌더링 (메가진화 분기 포함)
+            const evoContainer = document.getElementById('modalEvolution');
+            const baseMegaForms = MEGA_FORMS_BY_BASE_ID.get(pokemon.baseId) || [];
+            const hasEvoChain = (pokemon.evoIds && pokemon.evoIds.length > 1) || baseMegaForms.length > 0;
+
+            if (hasEvoChain) {
+                const normalChainHtml = (pokemon.evoIds || [pokemon.baseId]).map((evoId, idx, arr) => {
+                    const evoPoke = POKEMON_BY_ID.get(evoId);
+                    if (!evoPoke) return '';
+                    const isCurrent = evoId === pokemon.id;
+                    const arrow = idx < arr.length - 1
+                        ? `<svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>`
+                        : '';
+                    return `
+                        <button 
+                            onclick="openPokemonModal(${evoId}, true)"
+                            class="flex flex-col items-center p-2 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-red-500 text-white shadow-md scale-105' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'}"
+                        >
+                            <img src="${getArtworkUrl(evoPoke.spriteId, false)}" alt="${evoPoke.nameKo}" class="w-11 h-11 object-contain mb-1">
+                            <span class="text-[11px] font-extrabold leading-tight">${evoPoke.nameKo}</span>
+                        </button>
+                        ${arrow}
+                    `;
+                }).join('');
+
+                const megaChainHtml = baseMegaForms.length > 0
+                    ? `
+                        <div class="flex items-center gap-1.5 text-purple-500 font-black text-xs px-1">
+                            <span>🧬</span>
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-center gap-2">
+                            ${baseMegaForms.map(mForm => {
+                                const isCurrent = mForm.id === pokemon.id;
+                                return `
+                                    <button
+                                        onclick="openPokemonModal(${mForm.id}, true)"
+                                        class="flex flex-col items-center p-2 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white shadow-md scale-105' : 'bg-purple-50/70 hover:bg-purple-100 text-purple-900 border border-purple-200'}"
+                                    >
+                                        <img src="${getArtworkUrl(mForm.spriteId, false)}" alt="${mForm.nameKo}" class="w-11 h-11 object-contain mb-1">
+                                        <span class="text-[11px] font-extrabold leading-tight">${mForm.nameKo}</span>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    `
+                    : '';
+
+                evoContainer.innerHTML = normalChainHtml + megaChainHtml;
+            } else {
+                evoContainer.innerHTML = `
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600">
+                        <img src="${getArtworkUrl(pokemon.spriteId, false)}" alt="${pokemon.nameKo}" class="w-8 h-8 object-contain">
+                        <span>${pokemon.nameKo} (단일 진화 / 전설·환상)</span>
+                    </div>
+                `;
+            }
+
+            // 18x18 타입 차트 기반 방어 상성 자동 계산 렌더링
+            const { weaknesses, resistances } = calculateDefenseMatchups(pokemon.types);
+
+            document.getElementById('modalWeaknesses').innerHTML = weaknesses.length > 0
+                ? weaknesses.map(item => {
+                    const wConf = TYPE_CONFIG[item.type];
+                    const multBadge = item.mult === 4 ? `<span class="ml-1 px-1.5 py-0.2 bg-black/30 rounded text-[10px] font-black">4×</span>` : `<span class="ml-1 opacity-85 text-[10px]">2×</span>`;
+                    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${wConf.badge} ${wConf.text.includes('slate-900') ? '' : 'text-white'} shadow-xs">${wConf.ko}${multBadge}</span>`;
+                }).join('')
+                : `<span class="text-xs text-slate-400 font-medium">약점 없음</span>`;
+
+            document.getElementById('modalResistances').innerHTML = resistances.length > 0
+                ? resistances.map(item => {
+                    const rConf = TYPE_CONFIG[item.type];
+                    const multLabel = item.mult === 0 ? '무효 0×' : (item.mult === 0.25 ? '0.25×' : '0.5×');
+                    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${rConf.badge} ${rConf.text.includes('slate-900') ? '' : 'text-white'} shadow-xs">${rConf.ko}<span class="ml-1 px-1 bg-black/25 rounded text-[10px]">${multLabel}</span></span>`;
+                }).join('')
+                : `<span class="text-xs text-slate-400 font-medium">특별한 반감 없음</span>`;
+
+            // 이전/다음 포켓몬 버튼 연결 (필터 목록 내 또는 전체 목록 내 순환)
+            const navList = filteredPokemonList.some(p => p.id === id) ? filteredPokemonList : POKEMON_DATA;
+            const currentIndex = navList.findIndex(p => p.id === id);
+            const prevBtn = document.getElementById('prevPokemonBtn');
+            const nextBtn = document.getElementById('nextPokemonBtn');
+
+            if (navList.length > 1 && currentIndex !== -1) {
+                const prevIndex = (currentIndex - 1 + navList.length) % navList.length;
+                const nextIndex = (currentIndex + 1) % navList.length;
+                prevBtn.onclick = () => openPokemonModal(navList[prevIndex].id);
+                nextBtn.onclick = () => openPokemonModal(navList[nextIndex].id);
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+                prevBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+                nextBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+            } else {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                prevBtn.classList.add('opacity-40', 'cursor-not-allowed');
+                nextBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            }
+
+            // 모달 표시 애니메이션
+            const modal = document.getElementById('pokemonModal');
+            const modalContent = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+
+            requestAnimationFrame(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('pokemonModal');
+            const modalContent = document.getElementById('modalContent');
+
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+                currentModalPokemonId = null;
+            }, 180);
+        }
+
+        function closeModalOnBackdrop(event) {
+            if (event.target.id === 'pokemonModal') {
+                closeModal();
+            }
+        }
+
+        /**
+         * 9. 이벤트 리스너 및 초기화
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            // 실시간 검색 입력 이벤트
+            const searchInput = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+
+            searchInput.addEventListener('input', (e) => {
+                currentSearchQuery = e.target.value;
+                if (currentSearchQuery.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+                applyFilters(true);
+            });
+
+            // ESC 키 및 좌우 화살표 키 모달 제어
+            document.addEventListener('keydown', (e) => {
+                if (!currentModalPokemonId) return;
+                if (e.key === 'Escape') {
+                    closeModal();
+                } else if (e.key === 'ArrowLeft') {
+                    document.getElementById('prevPokemonBtn').click();
+                } else if (e.key === 'ArrowRight') {
+                    document.getElementById('nextPokemonBtn').click();
+                }
+            });
+
+            // 초기 UI 렌더링
+            renderGenFilters();
+            renderTypeFilters();
+            applyFilters(true);
+        });
+    </script>
+</body>
+</html>
